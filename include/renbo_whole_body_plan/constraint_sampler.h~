@@ -1,0 +1,31 @@
+#ifndef STABLE_CONFIG_GENERATOR_H_
+#define STABLE_CONFIG_GENERATOR_H_
+
+#include <moveit/planning_scene_monitor/planning_scene_monitor.h>
+#include <moveit/robot_state/robot_state.h>
+#include <moveit/robot_model/robot_model.h>
+
+#include <hrl_kinematics/TestStability.h>
+
+#include "rrt_connect_planner/nao_constraint_kinematics.h"
+
+#include <tf/transform_listener.h>
+#include <tf_conversions/tf_kdl.h>
+#include <tf/transform_datatypes.h>
+
+namespace constraint_sampler
+{
+  
+class StableConfigGenerator
+{
+  StableConfigGenerator(boost::shared_ptr<planning_scene::PlanningScene> planning_scene_, const std::string &group_name, float scale_sp) ;
+  
+  virtual ~StableConfigGenerator();
+};
+}
+
+
+
+
+
+#endif

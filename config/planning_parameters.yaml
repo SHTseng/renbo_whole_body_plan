@@ -1,0 +1,32 @@
+#-----  General Parameters
+planning_group: whole_body_fixed
+scale_sp: 0.8
+write_path: true 
+verbose: false
+test_flag: 0
+scenario: 0
+
+#------ file path
+scene_path: package://renbo_whole_body_plan/scene/
+file_path_DS_database: package://renbo_whole_body_plan/databse/ds_dataset.dat
+solution_file_path: package://renbo_whole_body_plan/trajectory/
+     
+#------ Stable Config Generator   
+scg_max_samples: 5000  #standard: 2000
+scg_max_ik_iterations: 5 
+ds_config_count: 15000
+      
+#------ RRT Planner
+planner_step_factor: 0.1  #standard 0.1
+planner_max_iterations: 8000 
+visualize_planning_path: true
+       
+#Weights robot limb chains for approach motion plans 
+r_arm_weight_approach: 1.0        
+l_arm_weight_approach: 1.0
+legs_weight_approach: 1.0
+
+#Weights robot limb chains for manipulate motion plans 
+r_arm_weight_manipulate: 1.0        
+l_arm_weight_manipulate: 0.0
+legs_weight_manipulate: 1.0

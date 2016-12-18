@@ -1,0 +1,885 @@
+Panels:
+  - Class: rviz/Displays
+    Help Height: 0
+    Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /Grid1/Offset1
+        - /PlanningScene1
+        - /PlanningScene1/Scene Geometry1
+        - /PlanningScene1/Scene Robot1
+      Splitter Ratio: 0.564023972
+    Tree Height: 893
+  - Class: rviz/Help
+    Name: Help
+  - Class: rviz/Views
+    Expanded:
+      - /Current View1
+    Name: Views
+    Splitter Ratio: 0.5
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.5
+      Cell Size: 1
+      Class: rviz/Grid
+      Color: 160; 160; 164
+      Enabled: true
+      Line Style:
+        Line Width: 0.0299999993
+        Value: Lines
+      Name: Grid
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Plane: XY
+      Plane Cell Count: 10
+      Reference Frame: r_sole
+      Value: true
+    - Attached Body Color: 150; 50; 150
+      Class: moveit_rviz_plugin/RobotState
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        gaze:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        head_pitch_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        head_yaw_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_ankle:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_ankle_pitch:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_arm_dummy_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        l_elbow_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_gripper:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_hip_pitch:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_hip_roll:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_hip_yaw:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_knee:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_shoulder_pitch_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_shoulder_roll_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_shoulder_yaw_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_sole:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        l_wrist_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_ankle:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_ankle_pitch:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_arm_dummy_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        r_elbow_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_gripper:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_hip_pitch:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_hip_roll:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_hip_yaw:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_knee:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_shoulder_pitch_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_shoulder_roll_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_shoulder_yaw_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_sole:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        r_wrist_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        trunk_pitch_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        trunk_roll_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        trunk_yaw_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        waist:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: RobotState
+      Robot Alpha: 0.5
+      Robot Description: robot_description
+      Robot State Topic: /whole_body_plan/renbo_robot_state
+      Show All Links: true
+      Show Highlights: true
+      Value: true
+      Visual Enabled: false
+    - Attached Body Color: 150; 50; 150
+      Class: moveit_rviz_plugin/RobotState
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        gaze:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        head_pitch_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        head_yaw_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_ankle:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_ankle_pitch:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_arm_dummy_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        l_elbow_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_gripper:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_hip_pitch:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_hip_roll:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_hip_yaw:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_knee:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_shoulder_pitch_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_shoulder_roll_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_shoulder_yaw_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_sole:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        l_wrist_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_ankle:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_ankle_pitch:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_arm_dummy_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        r_elbow_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_gripper:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_hip_pitch:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_hip_roll:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_hip_yaw:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_knee:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_shoulder_pitch_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_shoulder_roll_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_shoulder_yaw_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_sole:
+          Alpha: 1
+          Show Axes: true
+          Show Trail: false
+        r_wrist_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        trunk_pitch_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        trunk_roll_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        trunk_yaw_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        waist:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: RobotState
+      Robot Alpha: 0.300000012
+      Robot Description: robot_description
+      Robot State Topic: /whole_body_plan/goal_state
+      Show All Links: true
+      Show Highlights: true
+      Value: true
+      Visual Enabled: false
+    - Alpha: 1
+      Class: rviz/Polygon
+      Color: 25; 255; 0
+      Enabled: true
+      Name: Polygon
+      Topic: /whole_body_plan/support_polygon
+      Unreliable: false
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /whole_body_plan/projected_com
+      Name: Marker
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /whole_body_plan/com
+      Name: Marker
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /rviz_visual_markers
+      Name: MarkerArray
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /whole_body_plan/planned_path_marker
+      Name: MarkerArray
+      Namespaces:
+        Cylinder: true
+        Sphere: true
+      Queue Size: 100
+      Value: true
+    - Class: moveit_rviz_plugin/PlanningScene
+      Enabled: true
+      Move Group Namespace: ""
+      Name: PlanningScene
+      Planning Scene Topic: /whole_body_plan/renbo_planning_scene_monitor
+      Robot Description: robot_description
+      Scene Geometry:
+        Scene Alpha: 0.899999976
+        Scene Color: 50; 230; 50
+        Scene Display Time: 0.200000003
+        Show Scene Geometry: true
+        Voxel Coloring: Z-Axis
+        Voxel Rendering: Occupied Voxels
+      Scene Robot:
+        Attached Body Color: 150; 50; 150
+        Links:
+          All Links Enabled: true
+          Expand Joint Details: false
+          Expand Link Details: false
+          Expand Tree: false
+          Link Tree Style: Links in Alphabetic Order
+          gaze:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          head_pitch_link:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          head_yaw_link:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          l_ankle:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          l_ankle_pitch:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          l_arm_dummy_link:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          l_elbow_link:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          l_gripper:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          l_hip_pitch:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          l_hip_roll:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          l_hip_yaw:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          l_knee:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          l_shoulder_pitch_link:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          l_shoulder_roll_link:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          l_shoulder_yaw_link:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          l_sole:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          l_wrist_link:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          r_ankle:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          r_ankle_pitch:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          r_arm_dummy_link:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          r_elbow_link:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          r_gripper:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          r_hip_pitch:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          r_hip_roll:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          r_hip_yaw:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          r_knee:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          r_shoulder_pitch_link:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          r_shoulder_roll_link:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          r_shoulder_yaw_link:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          r_sole:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          r_wrist_link:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          trunk_pitch_link:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          trunk_roll_link:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          trunk_yaw_link:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          waist:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+        Robot Alpha: 1
+        Show Robot Collision: false
+        Show Robot Visual: true
+      Value: true
+    - Class: moveit_rviz_plugin/Trajectory
+      Enabled: true
+      Interrupt Display: false
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        gaze:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        head_pitch_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        head_yaw_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_ankle:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_ankle_pitch:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_arm_dummy_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        l_elbow_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_gripper:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_hip_pitch:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_hip_roll:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_hip_yaw:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_knee:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_shoulder_pitch_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_shoulder_roll_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_shoulder_yaw_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_sole:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        l_wrist_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_ankle:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_ankle_pitch:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_arm_dummy_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        r_elbow_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_gripper:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_hip_pitch:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_hip_roll:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_hip_yaw:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_knee:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_shoulder_pitch_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_shoulder_roll_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_shoulder_yaw_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_sole:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        r_wrist_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        trunk_pitch_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        trunk_roll_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        trunk_yaw_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        waist:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Loop Animation: false
+      Name: Trajectory
+      Robot Alpha: 0.5
+      Robot Description: robot_description
+      Show Robot Collision: false
+      Show Robot Visual: true
+      Show Trail: false
+      State Display Time: 0.05 s
+      Trajectory Topic: /whole_body_plan/renbo_trajectory
+      Value: true
+  Enabled: true
+  Global Options:
+    Background Color: 48; 48; 48
+    Fixed Frame: r_sole
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz/Interact
+      Hide Inactive Objects: true
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+  Value: true
+  Views:
+    Current:
+      Class: rviz/XYOrbit
+      Distance: 4.1538868
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.0599999987
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: false
+      Focal Point:
+        X: 0.091871798
+        Y: 0.0117849
+        Z: 1.63913995e-07
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.0500000007
+      Name: Current View
+      Near Clip Distance: 0.00999999978
+      Pitch: 0.299796939
+      Target Frame: base_footprint
+      Value: XYOrbit (rviz)
+      Yaw: 5.93488026
+    Saved: ~
+Window Geometry:
+  Displays:
+    collapsed: false
+  Height: 1028
+  Help:
+    collapsed: false
+  Hide Left Dock: false
+  Hide Right Dock: false
+  QMainWindow State: 000000ff00000000fd0000000200000000000001c6000003befc0200000005fb000000100044006900730070006c0061007900730100000028000003be000000dd00fffffffb0000000800480065006c00700000000342000000bb0000007600fffffffb0000000a0056006900650077007300000003b0000000b0000000b000fffffffb0000000c00430061006d00650072006100000002ff000001610000000000000000fb0000001e004d006f00740069006f006e00200050006c0061006e006e0069006e0067000000020f000001d70000000000000000000000030000047c000001f4fc0100000001fb0000001e004d006f00740069006f006e00200050006c0061006e006e0069006e006701000002a80000047c000000000000000000000558000003be00000001000000020000000100000002fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  Views:
+    collapsed: false
+  Width: 1828
+  X: 65
+  Y: 24
