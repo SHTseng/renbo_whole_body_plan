@@ -65,6 +65,8 @@ private:
 
   bool checkCollision(const planning_scene::PlanningScenePtr ps_);
 
+  void publishCollisionObject(const moveit_msgs::CollisionObject& msg, const std_msgs::ColorRGBA& color);
+
   void triggerPlanningSceneUpade();
 
   void loadYamlParameter();

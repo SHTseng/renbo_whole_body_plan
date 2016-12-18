@@ -206,7 +206,6 @@ bool RenboPlanner::demo(rrt_planner_msgs::Final_Pose_Planning::Request &req, rrt
     scene->setCurrentState(robot_state_);
     scene->getCurrentStateNonConst().update();
 
-    psm_->triggerSceneUpdateEvent(planning_scene_monitor::PlanningSceneMonitor::UPDATE_SCENE);
     psm_->triggerSceneUpdateEvent(planning_scene_monitor::PlanningSceneMonitor::UPDATE_STATE);
     ros::spinOnce();
   }
@@ -284,8 +283,7 @@ bool RenboPlanner::demo(rrt_planner_msgs::Final_Pose_Planning::Request &req, rrt
     scene->getCurrentStateNonConst().update();
     scene->processAttachedCollisionObjectMsg(attached_object);
 
-    psm_->triggerSceneUpdateEvent(planning_scene_monitor::PlanningSceneMonitor::UPDATE_SCENE);
-    psm_->triggerSceneUpdateEvent(planning_scene_monitor::PlanningSceneMonitor::UPDATE_STATE);
+    psm_->triggerSceneUpdateEvent(planning_scene_monitor::PlanningSceneMonitor::UPDATE_SCENE);\
     ros::spinOnce();
   }
 
@@ -350,38 +348,41 @@ void RenboPlanner::loadCollisionEnvironment(int type)
   }
   case 1:
   {
-    shape_msgs::SolidPrimitive pillar;
-    pillar.type = pillar.CYLINDER;
-    pillar.dimensions.resize(2);
-    pillar.dimensions[0] = 0.8;
-    pillar.dimensions[1] = 0.02;
+    table_pose.position.x = 0.6;
+    table_pose.position.y = 0.125;
+    table_pose.position.z = 0.0;
+    table_pose.orientation.w = 1.0;
+    table_pose.orientation.x = 0.0;
+    table_pose.orientation.y = 0.0;
+    table_pose.orientation.z = 0.0;
 
-    pose.position.x = 0.3;
-    pose.position.y = 0.0;
-    pose.position.z = 1.0;
-    pose.orientation.w = 0.707;
-    pose.orientation.x = 0.707;
+    moveit_msgs::CollisionObject collision_mesh_table = loadMeshFromSource("ikea_table.stl", table_pose);
+
+    publishCollisionObject(collision_mesh_table, getColor(222.0, 184.0, 135.0, 1.0));
+
+    shape_msgs::SolidPrimitive box;
+    box.type = box.BOX;
+    box.dimensions.resize(3);
+    box.dimensions[0] = 0.5;
+    box.dimensions[1] = 0.08;
+    box.dimensions[2] = 0.3;
+
+    pose.position.x = 0.6;
+    pose.position.y = 0.125;
+    pose.position.z = 0.9;
+    pose.orientation.w = 1.0;
+    pose.orientation.x = 0.0;
     pose.orientation.y = 0.0;
     pose.orientation.z = 0.0;
 
-    moveit_msgs::CollisionObject mesh_co;
-    mesh_co.id = "pillar";
-    mesh_co.header.frame_id = "r_sole";
-    mesh_co.primitives.push_back(pillar);
-    mesh_co.primitive_poses.push_back(pose);
-    mesh_co.operation = mesh_co.ADD;
+    moveit_msgs::CollisionObject collision_box;
+    collision_box.id = "box";
+    collision_box.header.frame_id = "r_sole";
+    collision_box.primitives.push_back(box);
+    collision_box.primitive_poses.push_back(pose);
+    collision_box.operation = collision_box.ADD;
 
-    cos_msg_.push_back(mesh_co);
-
-    pci_.addCollisionObjects(cos_msg_);
-    psm_->updateSceneWithCurrentState();
-
-    std::vector<std::string> object_names = pci_.getKnownObjectNames(false);
-
-    for (std::size_t i = 0; i < object_names.size(); i++)
-    {
-      ROS_INFO_STREAM("object name[" << i << "]: " <<object_names[i]);
-    }
+    publishCollisionObject(collision_box, getColor(222.0, 184.0, 135.0, 1.0));
 
     break;
   }
@@ -458,6 +459,18 @@ moveit_msgs::CollisionObject RenboPlanner::loadMeshFromSource(const std::string 
   mesh_co.operation = mesh_co.ADD;
 
   return mesh_co;
+
+}
+void RenboPlanner::publishCollisionObject(const moveit_msgs::CollisionObject& msg, const std_msgs::ColorRGBA& color)
+{
+  {
+    planning_scene_monitor::LockedPlanningSceneRW scene(psm_);
+    scene->getCurrentStateNonConst().update();
+    scene->processCollisionObjectMsg(msg);
+    scene->setObjectColor(msg.id, color);
+
+    triggerPlanningSceneUpade();
+  }
 
 }
 
