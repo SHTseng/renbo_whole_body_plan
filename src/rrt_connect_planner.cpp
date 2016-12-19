@@ -7,29 +7,27 @@ RRTConnectPlanner::RRTConnectPlanner(std::string group_name, std::string databas
   group_name_(group_name), database_path_(database_pth), visualize_path_(false), base_frame_("r_sole"),
   eef_name_("r_gripper"), nh_("~"), verbose_(false)
 {
-//  robot_model_loader::RobotModelLoader robot_model_loader("robot_description");
-//  robot_model::RobotModelPtr robot_model_ = robot_model_loader.getModel();
+  robot_model_loader_.reset(new robot_model_loader::RobotModelLoader("robot_description"));
 
-  psm_ = std::shared_ptr<planning_scene_monitor::PlanningSceneMonitor>(new planning_scene_monitor::PlanningSceneMonitor("robot_description"));
+  ps_ = std::shared_ptr<planning_scene::PlanningScene>(new planning_scene::PlanningScene(robot_model_loader_->getModel()));
 
-  ps_ = std::shared_ptr<planning_scene::PlanningScene>(new planning_scene::PlanningScene(psm_->getRobotModel()));
+  wb_jmg_ = ps_->getRobotModel()->getJointModelGroup(group_name_);
 
-  wb_jmg_ = psm_->getRobotModel()->getJointModelGroup(group_name_);
-
-  l_leg_jmg_ = psm_->getRobotModel()->getJointModelGroup("left_leg");
+  l_leg_jmg_ = ps_->getRobotModel()->getJointModelGroup("left_leg");
 
   wb_joint_names_ = wb_jmg_->getActiveJointModelNames();
+
   wb_link_names_ = wb_jmg_->getLinkModelNames();
 
   wb_num_joint_ = wb_joint_names_.size();
 
-  T_start_.name = "start_tree";
+  tree_start_.name = "start_tree";
 
-  T_goal_.name = "goal_tree";
+  tree_goal_.name= "goal_tree";
 
   robot_state_publisher_ = nh_.advertise<moveit_msgs::DisplayRobotState>("renbo_robot_state", 1);
 
-  scene_publisher_ = nh_.advertise<moveit_msgs::PlanningScene>("planning_scene", 1);
+//  scene_publisher_ = nh_.advertise<moveit_msgs::PlanningScene>("planning_scene", 1);
 
   trajectory_publisher_ = nh_.advertise<moveit_msgs::DisplayTrajectory>("renbo_trajectory", 1);
 
@@ -47,7 +45,6 @@ RRTConnectPlanner::RRTConnectPlanner(std::string group_name, std::string databas
 RRTConnectPlanner::~RRTConnectPlanner()
 {
   robot_state_publisher_.shutdown();
-  scene_publisher_.shutdown();
 }
 
 moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, double max_step_size)
@@ -73,11 +70,11 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
 
     if (swap == false)
     {
-      rrt_status = extendTree(T_start_, q_rand, q_near, max_step_size);
+      rrt_status = extendTree(tree_start_, q_rand, q_near, max_step_size);
 
       if (rrt_status != TRAPPED)
       {
-        path_found = connectTree(T_goal_, T_start_.nodes.back(), q_near, max_step_size);
+        path_found = connectTree(tree_goal_, tree_start_.nodes.back(), q_near, max_step_size);
 
         if (path_found == REACHED)
         {
@@ -86,7 +83,7 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
             ROS_INFO("Path found, T_goal is connect to T_start");
           }
 
-          writePath(T_start_, T_goal_, q_near, 1, sln_traj, solution_file_path_);
+          writePath(tree_start_, tree_goal_, q_near, 1, sln_traj, solution_file_path_);
 
           if (visualize_path_)
           {
@@ -109,7 +106,7 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
 
           end_time = ros::Time::now();
           dura =  end_time - start_time;
-          num_node_generated =  T_start_.num_nodes + T_goal_.num_nodes;
+          num_node_generated =  tree_start_.num_nodes + tree_goal_.num_nodes;
 
           ROS_INFO_STREAM("\nSummary:\n Totoal elapsed time: " << dura
                           << " seconds \n Generated " << num_node_generated << " nodes \n"
@@ -134,17 +131,17 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
     }
     else
     {
-      rrt_status = extendTree(T_goal_, q_rand, q_near, max_step_size);
+      rrt_status = extendTree(tree_goal_, q_rand, q_near, max_step_size);
 
       if (rrt_status != TRAPPED)
       {
-        path_found = connectTree(T_start_, T_goal_.nodes.back(), q_near, max_step_size);
+        path_found = connectTree(tree_start_, tree_goal_.nodes.back(), q_near, max_step_size);
 
         if (path_found == REACHED)
         {
           ROS_INFO("Path found, T_start is connect to T_goal");
 
-          writePath(T_start_, T_goal_, q_near, 2, sln_traj, solution_file_path_);
+          writePath(tree_start_, tree_goal_, q_near, 2, sln_traj, solution_file_path_);
 
           if (visualize_path_)
           {
@@ -167,7 +164,7 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
 
           end_time = ros::Time::now();
           dura =  end_time - start_time;
-          num_node_generated =  T_start_.num_nodes + T_goal_.num_nodes;
+          num_node_generated =  tree_start_.num_nodes + tree_goal_.num_nodes;
 
           ROS_INFO_STREAM("\nSummary:\n Totoal elapsed time: " << dura
                           << " seconds \n Generated " << num_node_generated << " nodes \n"
@@ -227,11 +224,11 @@ bool RRTConnectPlanner::setStartGoalConfigs(std::vector<double> start_config , s
     return false;
   }
 
-  T_start_.nodes.push_back(start);
-  T_start_.num_nodes = 1;
+  tree_start_.nodes.push_back(start);
+  tree_start_.num_nodes = 1;
 
-  T_goal_.nodes.push_back(goal);
-  T_goal_.num_nodes = 1;
+  tree_goal_.nodes.push_back(goal);
+  tree_goal_.num_nodes = 1;
 
   return true;
 }
@@ -971,10 +968,10 @@ bool RRTConnectPlanner::loadDSDatabase(std::string path)
 
 void RRTConnectPlanner::resetTrees()
 {
-  T_start_.nodes.clear();
-  T_start_.num_nodes = 0;
-  T_goal_.nodes.clear();
-  T_goal_.num_nodes = 0;
+  tree_start_.nodes.clear();
+  tree_start_.num_nodes = 0;
+  tree_goal_.nodes.clear();
+  tree_goal_.num_nodes = 0;
 }
 
 void RRTConnectPlanner::updateEnvironment(const planning_scene::PlanningScenePtr& scene)
@@ -1096,13 +1093,13 @@ bool RRTConnectPlanner::TEST(int test_flag)
 
     ps_->setCurrentState(current_state);
 
-    moveit_msgs::PlanningScene planning_scene_msg;
-    ps_->getPlanningSceneMsg(planning_scene_msg);
+//    moveit_msgs::PlanningScene planning_scene_msg;
+//    ps_->getPlanningSceneMsg(planning_scene_msg);
 
-    planning_scene_msg.is_diff = true;
-    planning_scene_msg.robot_state.is_diff = true;
+//    planning_scene_msg.is_diff = true;
+//    planning_scene_msg.robot_state.is_diff = true;
 
-    scene_publisher_.publish(planning_scene_msg);
+//    scene_publisher_.publish(planning_scene_msg);
 
     bool collision_free = false;
     collision_free = checkCollision(current_state);
@@ -1174,13 +1171,13 @@ bool RRTConnectPlanner::TEST(int test_flag)
 
     ps_->setCurrentState(current_state);
 
-    moveit_msgs::PlanningScene planning_scene_msg;
-    ps_->getPlanningSceneMsg(planning_scene_msg);
+//    moveit_msgs::PlanningScene planning_scene_msg;
+//    ps_->getPlanningSceneMsg(planning_scene_msg);
 
-    planning_scene_msg.is_diff = true;
-    planning_scene_msg.robot_state.is_diff = true;
+//    planning_scene_msg.is_diff = true;
+//    planning_scene_msg.robot_state.is_diff = true;
 
-    scene_publisher_.publish(planning_scene_msg);
+//    scene_publisher_.publish(planning_scene_msg);
 
     bool collision_free = false;
     collision_free = checkCollision(current_state);
@@ -1243,14 +1240,14 @@ bool RRTConnectPlanner::TEST(int test_flag)
 
     ps_->setCurrentState(current_state);
 
-    moveit_msgs::PlanningScene planning_scene_msg;
-    ps_->getPlanningSceneMsg(planning_scene_msg);
+//    moveit_msgs::PlanningScene planning_scene_msg;
+//    ps_->getPlanningSceneMsg(planning_scene_msg);
 
-    planning_scene_msg.is_diff = true;
-    planning_scene_msg.robot_state.is_diff = true;
+//    planning_scene_msg.is_diff = true;
+//    planning_scene_msg.robot_state.is_diff = true;
 
-    scene_publisher_.publish(planning_scene_msg);
-    robot_state_publisher_.publish(robot_state_msg_);
+//    scene_publisher_.publish(planning_scene_msg);
+//    robot_state_publisher_.publish(robot_state_msg_);
 
     ros::Duration(0.5).sleep();
 

@@ -56,6 +56,7 @@ public:
   int getNumConfig();
 
   void setSupportMode(FootSupport support_mode);
+
   void setVerbose(bool verbose);
 
   bool test();
@@ -82,7 +83,9 @@ private:
   void writePose();
 
   geometry_msgs::PolygonStamped getSupportPolygon() const;
+
   visualization_msgs::Marker getCOMMarker() const;
+
   visualization_msgs::Marker getPorjectedCOMMarker() const;
 
   ros::NodeHandle nh_;

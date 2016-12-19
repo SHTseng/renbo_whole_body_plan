@@ -4,7 +4,7 @@ scale_sp: 0.8
 write_path: true 
 verbose: false
 test_flag: 0
-scenario: 1
+scenario: 0
 
 #------ file path
 scene_path: package://renbo_whole_body_plan/scene/

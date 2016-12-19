@@ -9,14 +9,10 @@
 #include <moveit/robot_model/robot_model.h>
 #include <moveit/robot_model_loader/robot_model_loader.h>
 
-#include <moveit/planning_scene_interface/planning_scene_interface.h>
-#include <moveit/planning_scene_monitor/planning_scene_monitor.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/trajectory_processing/iterative_time_parameterization.h>
 
 #include <moveit/macros/console_colors.h>
-
-#include <moveit_visual_tools/moveit_visual_tools.h>
 
 #include <rviz_visual_tools/rviz_visual_tools.h>
 
@@ -166,13 +162,13 @@ private:
 
   planning_scene::PlanningScenePtr ps_;
 
-  moveit::planning_interface::PlanningSceneInterface pci_;
-
   std::string base_frame_;
 
   std::string group_name_;
 
   std::string eef_name_;
+
+  robot_model_loader::RobotModelLoaderPtr robot_model_loader_;
 
   const robot_state::JointModelGroup* wb_jmg_;
 
@@ -196,9 +192,9 @@ private:
 
   std::string solution_file_path_;
 
-  tree T_start_;
+  tree tree_start_;
 
-  tree T_goal_;
+  tree tree_goal_;
 
   Trajectory solution_path_configs_;
 

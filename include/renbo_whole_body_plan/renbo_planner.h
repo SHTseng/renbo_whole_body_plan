@@ -65,7 +65,11 @@ private:
 
   bool checkCollision(const planning_scene::PlanningScenePtr ps_);
 
-  void publishCollisionObject(const moveit_msgs::CollisionObject& msg, const std_msgs::ColorRGBA& color);
+  void addPSMCollisionObject(const moveit_msgs::CollisionObject& msg, const std_msgs::ColorRGBA& color);
+
+  void updatePSMRobotState(const robot_state::RobotState& state);
+
+  bool updatePickPlacePose(const int& senerio);
 
   void triggerPlanningSceneUpade();
 
