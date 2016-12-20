@@ -120,7 +120,7 @@ private:
 
   bool checkCollision(planning_scene::PlanningScenePtr ps_, const std::vector<double> config);
 
-  bool checkCollision(moveit::core::RobotState robot_state);
+  bool checkCollision(const moveit::core::RobotState& state);
 
 
   //Write the solution path configurations into a file

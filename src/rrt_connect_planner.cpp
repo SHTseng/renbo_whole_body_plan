@@ -80,7 +80,7 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
         {
           if (verbose_)
           {
-            ROS_INFO("Path found, T_goal is connect to T_start");
+            ROS_INFO("Path found, tree_goal is connect to tree_start");
           }
 
           writePath(tree_start_, tree_goal_, q_near, 1, sln_traj, solution_file_path_);
@@ -139,7 +139,7 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
 
         if (path_found == REACHED)
         {
-          ROS_INFO("Path found, T_start is connect to T_goal");
+          ROS_INFO("Path found, tree_start is connect to tree_goal");
 
           writePath(tree_start_, tree_goal_, q_near, 2, sln_traj, solution_file_path_);
 
@@ -239,7 +239,7 @@ status RRTConnectPlanner::extendTree(tree &input_tree, node q_rand, node &q_near
   node q_new, q_new_modified;
   bool enforce_ds = false;
 
-  robot_state::RobotState robot_state_(ps_->getRobotModel());
+  robot_state::RobotState robot_state_ = ps_->getCurrentStateNonConst();
   robot_state_.setToDefaultValues();
 
   // finding the nearest node of q_rand and save as q_near
@@ -928,7 +928,7 @@ bool RRTConnectPlanner::loadDSDatabase(std::string path)
   std::vector<double> config;
   double q_in;
 
-  ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_CYAN << "Loading double support database..." << MOVEIT_CONSOLE_COLOR_RESET);
+  ROS_INFO_STREAM_NAMED("rrt_planner", MOVEIT_CONSOLE_COLOR_CYAN << "Loading double support database..." << MOVEIT_CONSOLE_COLOR_RESET);
 
   ds_config_file_.open(path.c_str());
   if (!ds_config_file_)
@@ -959,7 +959,7 @@ bool RRTConnectPlanner::loadDSDatabase(std::string path)
     ds_database_config_count_++;
   }
 
-  ROS_INFO_STREAM("Load total " << ds_database_config_count_ << " configs");
+  ROS_INFO_STREAM_NAMED("rrt_planner", "Load total " << ds_database_config_count_ << " configs");
 
   ds_config_file_.close();
 
@@ -1021,7 +1021,7 @@ bool RRTConnectPlanner::checkCollision(planning_scene::PlanningScenePtr ps_, con
   return validity;
 }
 
-bool RRTConnectPlanner::checkCollision(moveit::core::RobotState robot_state_)
+bool RRTConnectPlanner::checkCollision(const moveit::core::RobotState& state)
 {
   bool collision_free = false;
 
@@ -1032,7 +1032,7 @@ bool RRTConnectPlanner::checkCollision(moveit::core::RobotState robot_state_)
   collision_req.group_name = group_name_;
   collision_res.clear();
 
-  ps_->checkCollision(collision_req, collision_res, robot_state_, acm_);
+  ps_->checkCollision(collision_req, collision_res, state, acm_);
 
   if (collision_res.collision == 0)
   {
