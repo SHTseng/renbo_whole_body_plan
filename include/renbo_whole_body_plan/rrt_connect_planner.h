@@ -17,8 +17,8 @@
 #include <rviz_visual_tools/rviz_visual_tools.h>
 
 #include <moveit_msgs/DisplayRobotState.h>
-#include <moveit_msgs/PlanningScene.h>
 #include <moveit_msgs/DisplayTrajectory.h>
+#include <moveit_msgs/AttachedCollisionObject.h>
 
 #include <renbo_whole_body_plan/stable_config_generator.h>
 #include <renbo_whole_body_plan/double_support_constraint.h>
@@ -71,6 +71,8 @@ public:
 
   void updateEnvironment(const planning_scene::PlanningScenePtr &scene);
 
+  void setAttachCollsionObject(const moveit_msgs::AttachedCollisionObject& attach_object);
+
   void setDatabasePath(const std::string& path);
 
   void setVisualizationSwtich(bool on_off);
@@ -79,14 +81,14 @@ public:
 
   bool TEST(int test_flag);
 
+  bool isGrasped = false;
+
 private:
 
   bool loadDSDatabase(std::string path);
 
-
   // Add a random valid config to the node
   void getRandomStableConfig(node &sample);
-
 
   /*
    * RRT related functions
@@ -107,13 +109,6 @@ private:
   //Add a configuration to the tree
   void addConfigtoTree(tree &input_tree, node q_near, node q_new_modified);
 
-
-//  //Modify q_new such that the returned node obeys the constraints (Joint limits + double support)
-//  status enforce_DS_Constraints(node q_new, node &q_new_modified);
-
-//  //Modify q_new_modified such that the returned node obeys the manipulation constraints (hand moves along line or circle)
-//  status enforce_MA_Constraints(std::string tree_name, node q_near, node q_new_ds, node &q_new_manip);
-
   /*
    * Check whether the robot configuration is valid or not, check collision and statically stable.
   */
@@ -121,7 +116,6 @@ private:
   bool checkCollision(planning_scene::PlanningScenePtr ps_, const std::vector<double> config);
 
   bool checkCollision(const moveit::core::RobotState& state);
-
 
   //Write the solution path configurations into a file
   void writePath(tree T_start, tree T_goal, node q_near, int connector, moveit_msgs::DisplayTrajectory &trajectory, std::string solution_file_path);
@@ -135,8 +129,8 @@ private:
   void linearInterpolation(Trajectory short_path, Trajectory &interpolated_path, int num_intermediate_waypoints);
 
   /*
-   * Path Shortcutter
-    Given the raw solution path tries to reduce the number of waypoints/configurations while maintaining validity of the path
+   * Path Shortcutter:
+     Given the raw solution path tries to reduce the number of waypoints/configurations while maintaining validity of the path
    *
    */
   bool pathShortCutter(Trajectory raw_path, Trajectory &shortcutted_path, int num_intermediate_waypoints);
@@ -197,6 +191,8 @@ private:
   tree tree_goal_;
 
   Trajectory solution_path_configs_;
+
+  moveit_msgs::AttachedCollisionObject attached_collision_object_;
 
   renbo_constraint_sampler::DoubleSupportConstraint ds_constraint_;
 

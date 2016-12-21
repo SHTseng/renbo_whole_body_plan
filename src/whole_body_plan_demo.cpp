@@ -2,7 +2,7 @@
 
 #include <rrt_planner_msgs/Generate_DS_Configs.h>
 #include <rrt_planner_msgs/Compute_Goal_Config.h>
-#include <rrt_planner_msgs/Compute_Motion_Plan.h>
+#include <rrt_planner_msgs/compute_motion_plan.h>
 #include <rrt_planner_msgs/SC_Generator_Test.h>
 #include <rrt_planner_msgs/RRT_Planner_Test.h>
 
@@ -15,13 +15,18 @@ int main(int argc, char* argv[])
 
   ros::NodeHandle nh_;
 
-  int ACTIVE_SERVICE = 0;
-  if (argc > 1)
+  int ACTIVE_SERVICE = 0, SCENERIO = 0;
+  if (argc == 1)
   {
     std::stringstream s(argv[1]);
     s >> ACTIVE_SERVICE;
   }
-
+  else if (argc > 1)
+  {
+    std::stringstream s(argv[1]), ss(argv[2]);
+    s >> ACTIVE_SERVICE;
+    ss >> SCENERIO;
+  }
 
   if (ACTIVE_SERVICE == 0)
   {
@@ -92,17 +97,19 @@ int main(int argc, char* argv[])
   }
   else if (ACTIVE_SERVICE == 4)
   {
-    ros::ServiceClient demo_ = nh_.serviceClient<rrt_planner_msgs::Final_Pose_Planning>("integration_demo");
+    ros::ServiceClient pick_place_motion_plan_ = nh_.serviceClient<rrt_planner_msgs::compute_motion_plan>("pick_place_motion_plan");
 
-    rrt_planner_msgs::Final_Pose_Planning demo_srv;
+    rrt_planner_msgs::compute_motion_plan pick_place_motion_plan_srv;
 
-    if (demo_.call(demo_srv))
+    pick_place_motion_plan_srv.request.scenerio = SCENERIO;
+
+    if (pick_place_motion_plan_.call(pick_place_motion_plan_srv))
     {
-      ROS_INFO_STREAM("return state: " << demo_srv.response.success);
+      ROS_INFO_STREAM("return state: " << pick_place_motion_plan_srv.response.success);
     }
     else
     {
-      ROS_ERROR("intergration demo fail");
+      ROS_ERROR("pick and place motion plan fail");
       exit(1);
     }
 

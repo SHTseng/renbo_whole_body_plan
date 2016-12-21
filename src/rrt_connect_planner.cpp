@@ -49,7 +49,11 @@ RRTConnectPlanner::~RRTConnectPlanner()
 
 moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, double max_step_size)
 {
-  robot_state::RobotState robot_state_(ps_->getRobotModel());
+//  rviz_visual_tools_->deleteAllMarkers();
+  ROS_INFO_STREAM("start query path between initial and goal state");
+  ROS_INFO_STREAM("current state is contain attach collision object: " << ps_->getRobotModel()->hasLinkModel("cup"));
+
+  robot_state::RobotState robot_state_ = ps_->getCurrentStateNonConst();
 
   moveit_msgs::DisplayTrajectory sln_traj;
   node q_rand, q_near;
@@ -61,8 +65,6 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
   ros::Duration dura;
 
   start_time = ros::Time::now();
-
-  rviz_visual_tools_->deleteAllMarkers();
 
   for (int i = 0; i < max_iter; i++)
   {
@@ -654,6 +656,11 @@ void RRTConnectPlanner::generateTrajectory(std::vector<std::vector<double> > pat
   {
     start_state.joint_state.name[i] = wb_joint_names_[i];
     start_state.joint_state.position[i] = path[0][i];
+  }
+
+  if (isGrasped)
+  {
+    start_state.attached_collision_objects.push_back(attached_collision_object_);
   }
 
   //start_state.multi_dof_joint_state.joint_names.push_back("virtual_joint");
@@ -1287,6 +1294,11 @@ bool RRTConnectPlanner::TEST(int test_flag)
   ROS_INFO("Finished Test");
 
   return true;
+}
+
+void RRTConnectPlanner::setAttachCollsionObject(const moveit_msgs::AttachedCollisionObject& attach_object)
+{
+  attached_collision_object_ = attach_object;
 }
 
 void RRTConnectPlanner::setDatabasePath(const std::string &path)

@@ -166,8 +166,9 @@ bool RenboPlanner::final_pose_planning(rrt_planner_msgs::Final_Pose_Planning::Re
   return true;
 }
 
-bool RenboPlanner::demo(rrt_planner_msgs::Final_Pose_Planning::Request &req, rrt_planner_msgs::Final_Pose_Planning::Response &res)
+bool RenboPlanner::pick_place_motion_plan(rrt_planner_msgs::compute_motion_plan::Request &req, rrt_planner_msgs::compute_motion_plan::Response &res)
 {
+  scenario_ = req.scenerio;
   rviz_visual_tools_->deleteAllMarkers();
 
   robot_state::RobotState robot_state_ = psm_->getPlanningScene()->getCurrentStateNonConst();
@@ -179,13 +180,17 @@ bool RenboPlanner::demo(rrt_planner_msgs::Final_Pose_Planning::Request &req, rrt
 
   eef_original_config_ = robot_state_.getGlobalLinkTransform(eef_name_);
 
-  Eigen::Affine3d orig_r_eef_config = robot_state_.getGlobalLinkTransform(eef_name_);
-  Eigen::Affine3d r_eef_config = fpp_->setRightGripperConfig(orig_r_eef_config);
+  Eigen::Affine3d eef_pick_pose, eef_place_pose;
+  if (!updatePickPlacePose(scenario_, eef_pick_pose, eef_place_pose))
+  {
+    ROS_INFO_STREAM("Can't update pick and place poses");
+    return false;
+  }
 
   fpp_->updateScene(psm_->getPlanningScene());
 
-  std::vector<double> pick_pose(wb_jmg_->getVariableCount());
-  bool final_pose_flag = fpp_->solveFinalPose(robot_state_, r_eef_config, pick_pose);
+  std::vector<double> pick_config(wb_jmg_->getVariableCount());
+  bool final_pose_flag = fpp_->solveFinalPose(robot_state_, eef_pick_pose, pick_config);
   if (!final_pose_flag)
   {
     ROS_INFO_STREAM("Solve pick pose fail");
@@ -194,7 +199,7 @@ bool RenboPlanner::demo(rrt_planner_msgs::Final_Pose_Planning::Request &req, rrt
 
   ROS_INFO_STREAM("Solved pick pose");
 
-  robot_state_.setVariablePositions(wb_jmg_->getJointModelNames(), pick_pose);
+  robot_state_.setVariablePositions(wb_jmg_->getJointModelNames(), pick_config);
   robot_state_.update();
   updatePSMRobotState(robot_state_);
 
@@ -247,7 +252,7 @@ bool RenboPlanner::demo(rrt_planner_msgs::Final_Pose_Planning::Request &req, rrt
   std::vector<double> initial_configuration(wb_jmg_->getVariableCount());
 
   rrt_->updateEnvironment(psm_->getPlanningScene());
-  rrt_->setStartGoalConfigs(initial_configuration, pick_pose);
+  rrt_->setStartGoalConfigs(initial_configuration, pick_config);
 
   moveit_msgs::DisplayTrajectory display_trajectory_ = rrt_->solveQuery(20000, 0.1);
   trajectory_publisher_.publish(display_trajectory_);
@@ -267,18 +272,16 @@ bool RenboPlanner::demo(rrt_planner_msgs::Final_Pose_Planning::Request &req, rrt
   }
 
   robot_state_ = psm_->getPlanningScene()->getCurrentStateNonConst();
-//  robot_state_.setToDefaultValues();
-
   updatePSMRobotState(robot_state_);
+
+  ros::Duration(3.0).sleep();
 
   /*
    *  Setup place pose
    */
-  r_eef_config.translation().x() += 0.1;
-  r_eef_config.translation().y() += 0.2;
 
-  std::vector<double> place_pose(wb_jmg_->getVariableCount());
-  final_pose_flag = fpp_->solveFinalPose(robot_state_, r_eef_config, place_pose);
+  std::vector<double> place_config(wb_jmg_->getVariableCount());
+  final_pose_flag = fpp_->solveFinalPose(robot_state_, eef_place_pose, place_config);
   if (!final_pose_flag)
   {
     ROS_INFO_STREAM("Solve place pose fail");
@@ -289,12 +292,14 @@ bool RenboPlanner::demo(rrt_planner_msgs::Final_Pose_Planning::Request &req, rrt
    *  RRT-Connect path planning, pick to place.
    */
   rrt_->updateEnvironment(psm_->getPlanningScene());
-  rrt_->setStartGoalConfigs(pick_pose, place_pose);
+  rrt_->setStartGoalConfigs(pick_config, place_config);
+
+  rrt_->isGrasped = true;
+  rrt_->setAttachCollsionObject(attached_object);
 
   display_trajectory_ = rrt_->solveQuery(20000, 0.1);
-
   trajectory_publisher_.publish(display_trajectory_);
-
+  rrt_->isGrasped = false;
 
   return true;
 }
@@ -343,9 +348,9 @@ void RenboPlanner::loadCollisionEnvironment(int type)
     box.dimensions[1] = 0.05;
     box.dimensions[2] = 0.3;
 
-    pose.position.x = 0.6;
+    pose.position.x = 0.65;
     pose.position.y = 0.125;
-    pose.position.z = 0.9;
+    pose.position.z = 0.85;
     pose.orientation.w = 1.0;
     pose.orientation.x = 0.0;
     pose.orientation.y = 0.0;
@@ -460,7 +465,6 @@ void RenboPlanner::updatePSMRobotState(const robot_state::RobotState& state)
   }
 }
 
-
 void RenboPlanner::triggerPlanningSceneUpade()
 {
   psm_->triggerSceneUpdateEvent(planning_scene_monitor::PlanningSceneMonitor::UPDATE_SCENE);
@@ -470,19 +474,20 @@ void RenboPlanner::triggerPlanningSceneUpade()
 bool RenboPlanner::updatePickPlacePose(const int& scenerio, Eigen::Affine3d& pick_pose, Eigen::Affine3d& place_pose)
 {
   std::string file_name;
+  std::string package_path = package_path_;
 
   switch (scenerio)
   {
   case 0:
-    file_name = package_path_.append("/database/scene_0.dat");
+    file_name = package_path.append("/database/scene_0.dat");
     break;
 
   case 1:
-    file_name = package_path_.append("/database/scene_1.dat");
+    file_name = package_path.append("/database/scene_1.dat");
     break;
 
   case 2:
-    file_name = package_path_.append("/database/scene_2.dat");
+    file_name = package_path.append("/database/scene_2.dat");
     break;
   }
 
@@ -517,15 +522,15 @@ bool RenboPlanner::updatePickPlacePose(const int& scenerio, Eigen::Affine3d& pic
 
   rotation_ = Eigen::Matrix3d::Identity(3, 3);
 
-  place_pose.translation().x() = config_[0];
-  place_pose.translation().y() = config_[1];
-  place_pose.translation().z() = config_[2];
+  place_pose.translation().x() = config_[6];
+  place_pose.translation().y() = config_[7];
+  place_pose.translation().z() = config_[8];
 
   place_pose.linear() = eef_original_config_.linear();
 
-  rotation_ = Eigen::AngleAxisd(config_[3], Eigen::Vector3d::UnitX())*
-              Eigen::AngleAxisd(config_[4], Eigen::Vector3d::UnitY())*
-              Eigen::AngleAxisd(config_[5], Eigen::Vector3d::UnitZ());
+  rotation_ = Eigen::AngleAxisd(config_[9], Eigen::Vector3d::UnitX())*
+              Eigen::AngleAxisd(config_[10], Eigen::Vector3d::UnitY())*
+              Eigen::AngleAxisd(config_[11], Eigen::Vector3d::UnitZ());
 
   place_pose.rotate(rotation_);
 
@@ -537,24 +542,24 @@ void RenboPlanner::loadYamlParameter()
   nh_.param("robot_description", ROBOT_DESCRIPTION, std::string("robot_description"));
   nh_.param("planning_group", PLANNING_GROUP, std::string("whole_body_fixed"));
 
-  // Stable Configuration Generator Params
+  // stable configuration generator parameters
   nh_.param("scg_max_samples", MAX_SAMPLES, 3000);
   nh_.param("scg_max_ik_iterations", MAX_IK_ITERATIONS, 5);
   nh_.param("scale_sp", SCALE_SP, 0.8);
   nh_.param("ds_config_count", DS_CONFIG_COUNT, 1);
 
-  // RRT-CONNECT Params
+  // rrt planner parameters
   nh_.param("planner_step_factor", ADVANCE_STEPS, 0.1);
   nh_.param("planner_max_iterations", MAX_EXPAND_ITERATIONS, 8000);
   nh_.param("visualize_planning_path", VISUALIZE_PLANNING_PATH, false);
 
-  // File paths
+  // file paths
   nh_.param("file_path_DS_database", ds_database_path_, std::string("package://renbo_whole_body_plan/database/ds_dataset.dat"));
   nh_.param("scene_path", scene_path_, std::string("package://renbo_whole_body_plan/scene/"));
 
   nh_.param("solution_file_path", solution_file_path_, std::string("package://renbo_whole_body_plan/trajectory/"));
 
-  // Common parameter
+  // general parameter
   nh_.param("scenario", scenario_, 0);
   nh_.param("test_flag", test_flag_, 0);
   nh_.param("write_path", write_pose_, false);

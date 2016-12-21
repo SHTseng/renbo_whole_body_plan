@@ -17,7 +17,7 @@
 
 #include <rrt_planner_msgs/Generate_DS_Configs.h>
 #include <rrt_planner_msgs/Compute_Goal_Config.h>
-#include <rrt_planner_msgs/Compute_Motion_Plan.h>
+#include <rrt_planner_msgs/compute_motion_plan.h>
 #include <rrt_planner_msgs/Compute_Linear_Manipulation_Plan.h>
 #include <rrt_planner_msgs/Compute_Circular_Manipulation_Plan.h>
 #include <rrt_planner_msgs/SC_Generator_Test.h>
@@ -47,7 +47,7 @@ public:
 
   bool compute_goal_config(rrt_planner_msgs::Compute_Goal_Config::Request &req, rrt_planner_msgs::Compute_Goal_Config::Response &res);
 
-  bool compute_motion_plan(rrt_planner_msgs::Compute_Motion_Plan::Request &req, rrt_planner_msgs::Compute_Motion_Plan::Response &res);
+  bool compute_motion_plan(rrt_planner_msgs::compute_motion_plan::Request &req, rrt_planner_msgs::compute_motion_plan::Response &res);
 
   bool sc_generator_test(rrt_planner_msgs::SC_Generator_Test::Request &req, rrt_planner_msgs::SC_Generator_Test::Response &res);
 
@@ -55,7 +55,7 @@ public:
 
   bool final_pose_planning(rrt_planner_msgs::Final_Pose_Planning::Request &req, rrt_planner_msgs::Final_Pose_Planning::Response &res);
 
-  bool demo(rrt_planner_msgs::Final_Pose_Planning::Request &req, rrt_planner_msgs::Final_Pose_Planning::Response &res);
+  bool pick_place_motion_plan(rrt_planner_msgs::compute_motion_plan::Request &req, rrt_planner_msgs::compute_motion_plan::Response &res);
 
 private:
 
