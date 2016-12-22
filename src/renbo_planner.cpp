@@ -267,8 +267,8 @@ bool RenboPlanner::pick_place_motion_plan(rrt_planner_msgs::compute_motion_plan:
     scene->getCurrentStateNonConst().update();
     scene->processAttachedCollisionObjectMsg(attached_object);
 
-    psm_->triggerSceneUpdateEvent(planning_scene_monitor::PlanningSceneMonitor::UPDATE_SCENE);\
-    ros::spinOnce();
+//    psm_->triggerSceneUpdateEvent(planning_scene_monitor::PlanningSceneMonitor::UPDATE_SCENE);
+//    ros::spinOnce();
   }
 
   robot_state_ = psm_->getPlanningScene()->getCurrentStateNonConst();
@@ -291,12 +291,12 @@ bool RenboPlanner::pick_place_motion_plan(rrt_planner_msgs::compute_motion_plan:
   /*
    *  RRT-Connect path planning, pick to place.
    */
-  rrt_->updateEnvironment(psm_->getPlanningScene());
-  rrt_->setStartGoalConfigs(pick_config, place_config);
-
   rrt_->isGrasped = true;
+
+  rrt_->updateEnvironment(psm_->getPlanningScene());
   rrt_->setAttachCollsionObject(attached_object);
 
+  rrt_->setStartGoalConfigs(pick_config, place_config);
   display_trajectory_ = rrt_->solveQuery(20000, 0.1);
   trajectory_publisher_.publish(display_trajectory_);
   rrt_->isGrasped = false;
@@ -344,9 +344,9 @@ void RenboPlanner::loadCollisionEnvironment(int type)
     shape_msgs::SolidPrimitive box;
     box.type = box.BOX;
     box.dimensions.resize(3);
-    box.dimensions[0] = 0.5;
-    box.dimensions[1] = 0.05;
-    box.dimensions[2] = 0.3;
+    box.dimensions[0] = 0.3;
+    box.dimensions[1] = 0.04;
+    box.dimensions[2] = 0.15;
 
     pose.position.x = 0.65;
     pose.position.y = 0.125;

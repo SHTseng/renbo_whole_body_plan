@@ -98,13 +98,13 @@ private:
   void findNearestNeighbour(tree T_current, node q_rand, node &nearest_neighbor);
 
   //Generate a q_new along the line connecting q_near to q_rand
-  status generate_q_new (node q_near, node q_rand, node &q_new, double step_size);
+  status generate_q_new (node q_near, node q_rand, node &q_new);
 
   //extend the tree (finds a valid q_new and adds it to the tree)
-  status extendTree(tree &input_tree, node q_rand, node &q_near, double max_step_size);
+  status extendTree(tree &input_tree, node q_rand, node &q_near, moveit::core::RobotState &state);
 
   //connect the trees (tries to connect one tree to the other)
-  status connectTree(tree &input_tree, node q_connect, node &q_near, double max_step_size);
+  status connectTree(tree &input_tree, node q_connect, node &q_near, moveit::core::RobotState &state);
 
   //Add a configuration to the tree
   void addConfigtoTree(tree &input_tree, node q_near, node q_new_modified);
@@ -189,6 +189,8 @@ private:
   tree tree_start_;
 
   tree tree_goal_;
+
+  double step_size_;
 
   Trajectory solution_path_configs_;
 

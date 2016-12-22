@@ -4,8 +4,14 @@ namespace renbo_planner
 {
 
 RRTConnectPlanner::RRTConnectPlanner(std::string group_name, std::string database_pth, std::string solution_path):
-  group_name_(group_name), database_path_(database_pth), visualize_path_(false), base_frame_("r_sole"),
-  eef_name_("r_gripper"), nh_("~"), verbose_(false)
+  nh_("~"),
+  group_name_(group_name),
+  database_path_(database_pth),
+  visualize_path_(false),
+  base_frame_("r_sole"),
+  eef_name_("r_gripper"),
+  verbose_(false),
+  step_size_(0.1)
 {
   robot_model_loader_.reset(new robot_model_loader::RobotModelLoader("robot_description"));
 
@@ -26,8 +32,6 @@ RRTConnectPlanner::RRTConnectPlanner(std::string group_name, std::string databas
   tree_goal_.name= "goal_tree";
 
   robot_state_publisher_ = nh_.advertise<moveit_msgs::DisplayRobotState>("renbo_robot_state", 1);
-
-//  scene_publisher_ = nh_.advertise<moveit_msgs::PlanningScene>("planning_scene", 1);
 
   trajectory_publisher_ = nh_.advertise<moveit_msgs::DisplayTrajectory>("renbo_trajectory", 1);
 
@@ -51,9 +55,27 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
 {
 //  rviz_visual_tools_->deleteAllMarkers();
   ROS_INFO_STREAM("start query path between initial and goal state");
-  ROS_INFO_STREAM("current state is contain attach collision object: " << ps_->getRobotModel()->hasLinkModel("cup"));
 
   robot_state::RobotState robot_state_ = ps_->getCurrentStateNonConst();
+  robot_state_.setToDefaultValues();
+  robot_state_.update();
+
+  robot_state::RobotState state_(ps_->getRobotModel());
+  state_.setToDefaultValues();
+  state_.update();
+
+  if (isGrasped)
+  {
+    ps_->processAttachedCollisionObjectMsg(attached_collision_object_);
+    robot_state_ = ps_->getCurrentStateNonConst();
+
+    bool hasAB = robot_state_.hasAttachedBody("cup");
+    if (hasAB)
+      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "receive attach collision object");
+    else
+      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "no attach collision object");
+  }
+
 
   moveit_msgs::DisplayTrajectory sln_traj;
   node q_rand, q_near;
@@ -72,11 +94,11 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
 
     if (swap == false)
     {
-      rrt_status = extendTree(tree_start_, q_rand, q_near, max_step_size);
+      rrt_status = extendTree(tree_start_, q_rand, q_near, robot_state_);
 
       if (rrt_status != TRAPPED)
       {
-        path_found = connectTree(tree_goal_, tree_start_.nodes.back(), q_near, max_step_size);
+        path_found = connectTree(tree_goal_, tree_start_.nodes.back(), q_near, robot_state_);
 
         if (path_found == REACHED)
         {
@@ -93,8 +115,8 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
 
             for (int i = 0; i < solution_path_configs_.size(); i++)
             {
-              robot_state_.setVariablePositions(wb_joint_names_, solution_path_configs_[i]);
-              Eigen::Affine3d eef_pose = robot_state_.getGlobalLinkTransform(eef_name_);
+              state_.setVariablePositions(wb_joint_names_, solution_path_configs_[i]);
+              Eigen::Affine3d eef_pose = state_.getGlobalLinkTransform(eef_name_);
 
               rviz_visual_tools_->publishSphere(eef_pose, rviz_visual_tools::ORANGE, rviz_visual_tools::MEDIUM);
               rviz_visual_tools_->trigger();
@@ -133,11 +155,11 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
     }
     else
     {
-      rrt_status = extendTree(tree_goal_, q_rand, q_near, max_step_size);
+      rrt_status = extendTree(tree_goal_, q_rand, q_near, robot_state_);
 
       if (rrt_status != TRAPPED)
       {
-        path_found = connectTree(tree_start_, tree_goal_.nodes.back(), q_near, max_step_size);
+        path_found = connectTree(tree_start_, tree_goal_.nodes.back(), q_near, robot_state_);
 
         if (path_found == REACHED)
         {
@@ -151,8 +173,8 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
 
             for (int i = 0; i < solution_path_configs_.size(); i++)
             {
-              robot_state_.setVariablePositions(wb_joint_names_, solution_path_configs_[i]);
-              Eigen::Affine3d eef_pose = robot_state_.getGlobalLinkTransform(eef_name_);
+              state_.setVariablePositions(wb_joint_names_, solution_path_configs_[i]);
+              Eigen::Affine3d eef_pose = state_.getGlobalLinkTransform(eef_name_);
 
               rviz_visual_tools_->publishSphere(eef_pose, rviz_visual_tools::ORANGE, rviz_visual_tools::MEDIUM);
               rviz_visual_tools_->trigger();
@@ -235,20 +257,21 @@ bool RRTConnectPlanner::setStartGoalConfigs(std::vector<double> start_config , s
   return true;
 }
 
-status RRTConnectPlanner::extendTree(tree &input_tree, node q_rand, node &q_near, double max_step_size)
+status RRTConnectPlanner::extendTree(tree &input_tree, node q_rand, node &q_near, moveit::core::RobotState &state)
 {
   status stat = ADVANCED;
   node q_new, q_new_modified;
   bool enforce_ds = false;
 
   robot_state::RobotState robot_state_ = ps_->getCurrentStateNonConst();
+//  robot_state::RobotState robot_state_ = attached_robot_state_;
   robot_state_.setToDefaultValues();
 
   // finding the nearest node of q_rand and save as q_near
   findNearestNeighbour(input_tree, q_rand, q_near);
 
   // try to connect q_rand and q_near with fixed step size
-  stat = generate_q_new(q_near, q_rand, q_new, max_step_size);
+  stat = generate_q_new(q_near, q_rand, q_new);
 
   if (stat == ADVANCED)
   {
@@ -268,10 +291,10 @@ status RRTConnectPlanner::extendTree(tree &input_tree, node q_rand, node &q_near
     wb_jnt_pos_map_["l_wrist_yaw_joint"] = 0.0;
     wb_jnt_pos_map_["l_wrist_pitch_joint"] = -0.523;
 
-    robot_state_.setVariablePositions(wb_jnt_pos_map_);
-    robot_state_.update();
+    state.setVariablePositions(wb_jnt_pos_map_);
+    state.update();
 
-    enforce_ds = ds_constraint_.enforceDSLeftLeg(robot_state_, l_leg_jmg_);
+    enforce_ds = ds_constraint_.enforceDSLeftLeg(state, l_leg_jmg_);
 
     if (!enforce_ds)
     {
@@ -284,14 +307,14 @@ status RRTConnectPlanner::extendTree(tree &input_tree, node q_rand, node &q_near
     }
     else
     {
-      ps_->setCurrentState(robot_state_);
+      ps_->setCurrentState(state);
 
       bool collision_free = false;
-      collision_free = checkCollision(robot_state_);
+      collision_free = checkCollision(state);
 
       if (collision_free)
       {
-        robot_state_.copyJointGroupPositions(wb_jmg_, q_new_modified.config);
+        state.copyJointGroupPositions(wb_jmg_, q_new_modified.config);
 
         addConfigtoTree(input_tree, q_near, q_new_modified);
 
@@ -320,9 +343,9 @@ status RRTConnectPlanner::extendTree(tree &input_tree, node q_rand, node &q_near
           collide_color.b = 0.0;
           collide_color.a = 1.0;
 
-          robot_state::robotStateToRobotStateMsg(robot_state_, robot_state_msg_.state);
+          robot_state::robotStateToRobotStateMsg(state, robot_state_msg_.state);
 
-          const std::vector<const moveit::core::LinkModel*>& link_models = robot_state_.getRobotModel()->getLinkModelsWithCollisionGeometry();
+          const std::vector<const moveit::core::LinkModel*>& link_models = state.getRobotModel()->getLinkModelsWithCollisionGeometry();
 
           robot_state_msg_.highlight_links.resize(link_models.size());
 
@@ -360,21 +383,29 @@ status RRTConnectPlanner::extendTree(tree &input_tree, node q_rand, node &q_near
 
 }
 
-status RRTConnectPlanner::connectTree(tree &input_tree, node q_connect, node &q_near, double max_step_size)
+status RRTConnectPlanner::connectTree(tree &input_tree, node q_connect, node &q_near, moveit::core::RobotState& state)
 {
+//  if (isGrasped)
+//  {
+//    bool hasAB = state.hasAttachedBody("cup");
+//    if (hasAB)
+//      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "connect_tree: receive attach collision object");
+//    else
+//      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "connect_tree: no attach collision object");
+//  }
+
   status stat = ADVANCED;
   node current_q_near;
   int prev_node_index = -1;
   int iteration_cnt = 0;
 
-  // test
   findNearestNeighbour(input_tree, q_connect, q_near);
 
   current_q_near = q_near;
 
   while (stat == ADVANCED)
   {
-    stat = extendTree(input_tree, q_connect, current_q_near, max_step_size);
+    stat = extendTree(input_tree, q_connect, current_q_near, state);
 
     if (stat == REACHED)
     {
@@ -468,7 +499,7 @@ void RRTConnectPlanner::findNearestNeighbour(tree T_current, node q_rand, node &
 }
 
 // TODO: add collision and stability checking
-status RRTConnectPlanner::generate_q_new(node q_near, node q_rand, node &q_new, double step_size)
+status RRTConnectPlanner::generate_q_new(node q_near, node q_rand, node &q_new)
 {
   status stat = TRAPPED;
   std::vector<double> distance(wb_num_joint_);
@@ -492,7 +523,7 @@ status RRTConnectPlanner::generate_q_new(node q_near, node q_rand, node &q_new, 
   for (std::size_t i = 0; i < wb_num_joint_; i++)
   {
     direction[i] = distance[i] / dist_norm;
-    increment[i] = step_size * direction[i]; // *joint_weight_?
+    increment[i] = step_size_ * direction[i]; // *joint_weight_?
 
     sum_sqrt_incr += increment[i]*increment[i];
   }
@@ -984,6 +1015,11 @@ void RRTConnectPlanner::resetTrees()
 void RRTConnectPlanner::updateEnvironment(const planning_scene::PlanningScenePtr& scene)
 {
   ps_ = scene;
+
+//  if (isGrasped)
+//  {
+//    ps_->processAttachedCollisionObjectMsg(attached_collision_object_);
+//  }
 }
 
 bool RRTConnectPlanner::checkCollision(planning_scene::PlanningScenePtr ps_, const std::vector<double> config)
@@ -1121,7 +1157,7 @@ bool RRTConnectPlanner::TEST(int test_flag)
 
       findNearestNeighbour(start_tree, q_rand, q_near);
 
-      tree_stat = connectTree(start_tree, q_rand, q_near, 0.1);
+      tree_stat = connectTree(start_tree, q_rand, q_near, current_state);
 
     }
     else
