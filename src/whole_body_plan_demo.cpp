@@ -16,16 +16,16 @@ int main(int argc, char* argv[])
   ros::NodeHandle nh_;
 
   int ACTIVE_SERVICE = 0, SCENERIO = 0;
-  if (argc == 1)
+  if (argc == 2)
   {
     std::stringstream s(argv[1]);
     s >> ACTIVE_SERVICE;
   }
-  else if (argc > 1)
+  else if (argc == 3)
   {
-    std::stringstream s(argv[1]), ss(argv[2]);
-    s >> ACTIVE_SERVICE;
-    ss >> SCENERIO;
+    //std::stringstream s(argv[1]), ss(argv[2]);
+    ACTIVE_SERVICE = std::atoi(argv[1]);
+    SCENERIO = std::atoi(argv[2]);
   }
 
   if (ACTIVE_SERVICE == 0)

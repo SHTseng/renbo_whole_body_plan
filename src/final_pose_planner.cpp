@@ -28,9 +28,7 @@ FinalPosePlanner::FinalPosePlanner():
 
   wb_num_joint_ = wb_joint_names_.size();
 
-  robot_state_publisher_ = nh_.advertise<moveit_msgs::DisplayRobotState>("renbo_robot_state", 1);
-
-  scene_publisher_ = nh_.advertise<moveit_msgs::PlanningScene>("planning_scene", 1);
+  nlp_ik_solver_.reset(new NLPIKSolver());
 
   initilize();
 
@@ -79,14 +77,14 @@ bool FinalPosePlanner::solveFinalPose(moveit::core::RobotState &robot_state_,
   KDL::ChainIkSolverVel_pinv ik_pinv = KDL::ChainIkSolverVel_pinv(right_leg_chain_);
   KDL::ChainIkSolverPos_NR ik = KDL::ChainIkSolverPos_NR(right_leg_chain_, fk_solver, ik_pinv, 100, 1e-3);
 
-  int num_joints = right_leg_chain_.getNrOfJoints();
+  unsigned int num_joints = right_leg_chain_.getNrOfJoints();
 
   KDL::JntArray q_out = KDL::JntArray(num_joints);
   KDL::JntArray q_init = KDL::JntArray(num_joints);
 
   for (int i = 0; i < num_joints; i++)
   {
-    q_init(i) = 0.0;
+    q_init(i, 0) = 0.0;
   }
 
   bool ik_check;
@@ -256,54 +254,48 @@ bool FinalPosePlanner::TEST()
   robot_state_.setToDefaultValues();
   robot_state_.update();
 
-//  moveit_msgs::PlanningScene planning_scene_msg;
-//  ps_->getPlanningSceneMsg(planning_scene_msg);
-
-//  planning_scene_msg.is_diff = true;
-//  planning_scene_msg.robot_state.is_diff = true;
-
-//  scene_publisher_.publish(planning_scene_msg);
-
   r_eef_config_ = robot_state_.getGlobalLinkTransform("r_gripper");
-
-  Eigen::Affine3d read_r_eef_config = setRightGripperConfig(r_eef_config_);
+//
+//  Eigen::Affine3d read_r_eef_config = setRightGripperConfig(r_eef_config_);
 
 //  Eigen::Affine3d r_eef_config = r_eef_config_;
 //  std::vector<double> solution;
 //  solution.resize(wb_num_joint_);
 
 //  bool solve_final_pose = solveFinalPose(robot_state_, read_r_eef_config, solution);
-  TRAC_IK::TRAC_IK trac_ik_solver_("r_sole", "r_gripper", "/robot_description", 0.005, 1e-5, TRAC_IK::Manip1);
+//  TRAC_IK::TRAC_IK trac_ik_solver_("r_sole", "r_gripper", "/robot_description", 0.005, 1e-5, TRAC_IK::Manip1);
+//
+//  KDL::JntArray q_init = KDL::JntArray(wb_r_arm_jmg_->getVariableCount());
+//
+//  for (int i = 0; i < wb_r_arm_jmg_->getVariableCount(); i++)
+//  {
+//    q_init(i) = 0.0;
+//  }
+//
+//  KDL::Frame kdl_eef_pose = EigenToKDL(read_r_eef_config);
+//
+//  KDL::JntArray q_out = KDL::JntArray(wb_r_arm_jmg_->getVariableCount());
+//  int rc = trac_ik_solver_.CartToJnt(q_init, kdl_eef_pose, q_out);
+//
+//  if (rc)
+//  {
+//    std::vector<std::string> wb_r_arm_names = wb_r_arm_jmg_->getJointModelNames();
+//
+//    wb_jnt_pos_map_.clear();
+//    for (int i = 0; i < wb_r_arm_names.size(); i++)
+//    {
+//      wb_jnt_pos_map_.insert(std::pair<std::string, double>(wb_r_arm_names[i], q_out(i)));
+//    }
+//
+//    robot_state_.setVariablePositions(wb_jnt_pos_map_);
+//    robot_state_.update();
 
-  KDL::JntArray q_init = KDL::JntArray(wb_r_arm_jmg_->getVariableCount());
+//  }
 
-  for (int i = 0; i < wb_r_arm_jmg_->getVariableCount(); i++)
-  {
-    q_init(i) = 0.0;
-  }
+  bool rc = true;
 
-  KDL::Frame kdl_eef_pose = EigenToKDL(read_r_eef_config);
-
-  KDL::JntArray q_out = KDL::JntArray(wb_r_arm_jmg_->getVariableCount());
-  int rc = trac_ik_solver_.CartToJnt(q_init, kdl_eef_pose, q_out);
-
-  if (rc)
-  {
-    std::vector<std::string> wb_r_arm_names = wb_r_arm_jmg_->getJointModelNames();
-
-    wb_jnt_pos_map_.clear();
-    for (int i = 0; i < wb_r_arm_names.size(); i++)
-    {
-      wb_jnt_pos_map_.insert(std::pair<std::string, double>(wb_r_arm_names[i], q_out(i)));
-    }
-
-    robot_state_.setVariablePositions(wb_jnt_pos_map_);
-    robot_state_.update();
-
-    moveit_msgs::DisplayRobotState robot_state_msg_;
-    robot_state::robotStateToRobotStateMsg(robot_state_, robot_state_msg_.state);
-    robot_state_publisher_.publish(robot_state_msg_);
-  }
+  std::vector<double> sln_pose;
+  nlp_ik_solver_->solve(r_eef_config_, sln_pose);
 
   return rc;
 

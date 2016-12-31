@@ -135,31 +135,49 @@ bool RenboPlanner::rrt_planner_test(rrt_planner_msgs::RRT_Planner_Test::Request 
 
 bool RenboPlanner::final_pose_planning(rrt_planner_msgs::Final_Pose_Planning::Request &req, rrt_planner_msgs::Final_Pose_Planning::Response &res)
 {
-  loadCollisionEnvironment(scenario_);
+//  scenario_ = req.scenerio;
+//  rviz_visual_tools_->deleteAllMarkers();
+//
+//  robot_state::RobotState robot_state_ = psm_->getPlanningScene()->getCurrentStateNonConst();
+//  robot_state_.setToDefaultValues();
+//  robot_state_.update();
+//
+//  updatePSMRobotState(robot_state_);
+//  loadCollisionEnvironment(scenario_);
+//
+//  eef_original_config_ = robot_state_.getGlobalLinkTransform(eef_name_);
+//
+//  Eigen::Affine3d eef_pick_pose, eef_place_pose;
+//  if (!updatePickPlacePose(scenario_, eef_pick_pose, eef_place_pose))
+//  {
+//    ROS_INFO_STREAM("Can't update pick and place poses");
+//    return false;
+//  }
+//
+//  fpp_->updateScene(psm_->getPlanningScene());
+//
+//  std::vector<double> pick_config(wb_jmg_->getVariableCount());
+//  bool final_pose_flag = fpp_->solveFinalPose(robot_state_, eef_pick_pose, pick_config);
+//  if (!final_pose_flag)
+//  {
+//    ROS_INFO_STREAM("Solve pick pose fail");
+//    return false;
+//  }
+//
+//  ROS_INFO_STREAM("Solved pick pose");
+//
+//  robot_state_.setVariablePositions(wb_joint_names_, pick_config);
+//  robot_state_.update();
+//
+//  moveit_msgs::DisplayRobotState robot_state_msgs;
+//  robot_state::robotStateToRobotStateMsg(robot_state_, robot_state_msgs.state);
+//  goal_state_publisher_.publish(robot_state_msgs);
 
-  const std::string planning_scene_srv = "get_planning_scene";
-  psm_->requestPlanningSceneState(planning_scene_srv);
-  planning_scene_monitor::LockedPlanningSceneRW locked_ps_rw(psm_);
+  ROS_INFO_STREAM("test drake");
 
-  locked_ps_rw->getCurrentStateNonConst().update();
-  ps_ = locked_ps_rw->diff();
-  ps_->decoupleParent();
+  fpp_->TEST();
 
-  fpp_->updateScene(ps_);
-
-  if (!fpp_->TEST())
-  {
-    ROS_ERROR("could not run final pose planner");
-    return false;
-  }
-
-  Eigen::Affine3d pose;
-  pose = Eigen::AngleAxisd(M_PI/4, Eigen::Vector3d::UnitZ());
-  pose.translation() = Eigen::Vector3d(0.5, -0.125, 0.8);
-
-  pose.translation() = Eigen::Vector3d(0.6, 0.125, 0.8);
-  rviz_visual_tools_->publishCylinder(pose, rviz_visual_tools::RED, 0.15, 0.03);
-  rviz_visual_tools_->trigger();
+  ROS_INFO_STREAM("test drake complete");
 
   res.success = true;
 

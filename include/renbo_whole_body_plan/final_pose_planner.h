@@ -33,6 +33,7 @@
 #include <random_numbers/random_numbers.h>
 
 #include <renbo_whole_body_plan/double_support_constraint.h>
+#include <renbo_whole_body_plan/nlp_ik_solver.h>
 
 #include <fstream>
 
@@ -112,6 +113,9 @@ private:
   boost::shared_ptr<const urdf::ModelInterface> renbo_urdf_;
 
   renbo_constraint_sampler::DoubleSupportConstraint ds_constraint_;
+
+//  NLPIKSolver nlp_ik_solver_;
+  std::shared_ptr<NLPIKSolver> nlp_ik_solver_;
 
   Eigen::Affine3d r_eef_config_;
 

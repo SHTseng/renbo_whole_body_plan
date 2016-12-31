@@ -3,7 +3,6 @@
 
 #include <ros/ros.h>
 
-#include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <moveit/planning_scene_monitor/planning_scene_monitor.h>
 #include <moveit/planning_scene/planning_scene.h>
 
@@ -16,10 +15,7 @@
 #include <rviz_visual_tools/rviz_visual_tools.h>
 
 #include <rrt_planner_msgs/Generate_DS_Configs.h>
-#include <rrt_planner_msgs/Compute_Goal_Config.h>
 #include <rrt_planner_msgs/compute_motion_plan.h>
-#include <rrt_planner_msgs/Compute_Linear_Manipulation_Plan.h>
-#include <rrt_planner_msgs/Compute_Circular_Manipulation_Plan.h>
 #include <rrt_planner_msgs/SC_Generator_Test.h>
 #include <rrt_planner_msgs/RRT_Planner_Test.h>
 #include <rrt_planner_msgs/Final_Pose_Planning.h>
@@ -44,10 +40,6 @@ public:
   ~RenboPlanner();
 
   bool generate_ds_database(rrt_planner_msgs::Generate_DS_Configs::Request &req, rrt_planner_msgs::Generate_DS_Configs::Response &res);
-
-  bool compute_goal_config(rrt_planner_msgs::Compute_Goal_Config::Request &req, rrt_planner_msgs::Compute_Goal_Config::Response &res);
-
-  bool compute_motion_plan(rrt_planner_msgs::compute_motion_plan::Request &req, rrt_planner_msgs::compute_motion_plan::Response &res);
 
   bool sc_generator_test(rrt_planner_msgs::SC_Generator_Test::Request &req, rrt_planner_msgs::SC_Generator_Test::Response &res);
 
@@ -82,9 +74,8 @@ private:
   ros::NodeHandle nh_;
 
   ros::Publisher robot_state_publisher_;
-  ros::Publisher goal_state_publisher_;
 
-  ros::Publisher scene_publisher_;
+  ros::Publisher goal_state_publisher_;
 
   ros::Publisher trajectory_publisher_;
 
@@ -100,12 +91,6 @@ private:
 
   planning_scene::PlanningScenePtr ps_;
 
-  moveit::planning_interface::PlanningSceneInterface pci_;
-
-  std::vector<moveit_msgs::CollisionObject> cos_msg_;
-
-  moveit_msgs::PlanningScene planning_scene_msg_;
-
   std::string base_frame_;
 
   std::string eef_name_;
@@ -115,8 +100,6 @@ private:
   std::string package_path_;
 
   std::vector<std::string> wb_joint_names_;
-
-  moveit_visual_tools::MoveItVisualToolsPtr moveit_visual_tools_;
 
   rviz_visual_tools::RvizVisualToolsPtr rviz_visual_tools_;
 
