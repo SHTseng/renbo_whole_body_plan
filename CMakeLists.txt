@@ -76,6 +76,7 @@ target_link_libraries(${PROJECT_NAME}
     drakeMultibodyParsers
     drakeRBM
     drakeRigidBodyPlant
+    drakeRigidBodyConstraint
 )
 
 add_executable(planning_node src/planning_node.cpp)
@@ -93,4 +94,8 @@ target_link_libraries(renbo_test_drake
         drakeMultibodyParsers
         drakeRBM
         drakeRigidBodyPlant
+        drakeCollision
+        drakeGeometryUtil
+        drakeShapes
+        spruce
         tinyxml2)
