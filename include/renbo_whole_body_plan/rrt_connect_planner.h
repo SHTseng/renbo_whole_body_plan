@@ -61,7 +61,7 @@ class RRTConnectPlanner
 {
 public:
 
-  RRTConnectPlanner(std::string group_name, std::__cxx11::string database_pth, std::string solution_path);
+  RRTConnectPlanner(std::string group_name, std::string database_pth, std::string solution_path);
 
   ~RRTConnectPlanner();
 

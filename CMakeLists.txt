@@ -1,8 +1,14 @@
 cmake_minimum_required(VERSION 2.8.3)
-
 project(renbo_whole_body_plan)
 
 add_compile_options(-std=c++11)
+
+if(APPLE)
+  set(DRAKE_PATH "$ENV{HOME}/drake-distro/build/install")
+else()
+  set(DRAKE_PATH "$ENV{HOME}/drake_catkin_ws/build/install")
+endif()
+
 
 find_package(catkin REQUIRED COMPONENTS
   hrl_kinematics
@@ -11,28 +17,24 @@ find_package(catkin REQUIRED COMPONENTS
   moveit_visual_tools
   rviz_visual_tools
   trac_ik_lib
-  drake_ros_common
-  drake_ros_systems
 )
 
 find_package(PCL 1.7 REQUIRED)
 
-set(EIGEN3_INCLUDE_DIR /home/shtseng/drake_catkin_ws/install/include/eigen3)
+set(EIGEN3_INCLUDE_DIR ${DRAKE_PATH}/include/eigen3)
 
 catkin_package(
-  INCLUDE_DIRS 
+  INCLUDE_DIRS
     include
-  LIBRARIES 
+  LIBRARIES
     ${PROJECT_NAME}
-  CATKIN_DEPENDS 
+  CATKIN_DEPENDS
     moveit_core
     hrl_kinematics
-    moveit_visual_tools 
-    rviz_visual_tools 
-    rrt_planner_msgs 
+    moveit_visual_tools
+    rviz_visual_tools
+    rrt_planner_msgs
     trac_ik_lib
-    drake_ros_common
-    drake_ros_systems
 )
 
 
@@ -40,15 +42,13 @@ include_directories(
     include
     ${catkin_INCLUDE_DIRS}
     ${PCL_INCLUDE_DIRS}
-    ${pkg_ipopt_INCLUDE_DIRS}
     ${EIGEN3_INCLUDE_DIR}
-    /home/shtseng/drake_catkin_ws/install/include
+    ${DRAKE_PATH}/include
 )
 
 link_directories(
     ${catkin_LIBRARY_DIRS}
-    ${pkg_ipopt_LIBRARIES}
-    /home/shtseng/drake_catkin_ws/install/lib
+    ${DRAKE_PATH}/lib
 )
 
 #Project Files
@@ -72,12 +72,14 @@ add_library(${PROJECT_NAME} ${rrt_connect_planner_files})
 target_link_libraries(${PROJECT_NAME}
     ${catkin_LIBRARIES}
     drakeCommon
+    drakeJoints
     drakeIK
     drakeMultibodyParsers
     drakeRBM
     drakeRigidBodyPlant
     drakeRigidBodyConstraint
 )
+add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
 
 add_executable(planning_node src/planning_node.cpp)
 target_link_libraries(planning_node ${PROJECT_NAME})

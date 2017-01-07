@@ -51,7 +51,7 @@ public:
 
 private:
 
-  moveit_msgs::CollisionObject loadMeshFromSource(const std::__cxx11::string file_name, const geometry_msgs::Pose &pose);
+  moveit_msgs::CollisionObject loadMeshFromSource(const std::string file_name, const geometry_msgs::Pose &pose);
 
   void loadCollisionEnvironment(int type);
 

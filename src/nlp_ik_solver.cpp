@@ -83,4 +83,3 @@ void NLPIKSolver::FindJointAndInsert(const RigidBodyTreed* model,
   auto position_indices = GetJointPositionVectorIndices(model, name);
   position_list->insert(position_list->end(), position_list->begin(), position_list->end());
 }
-
