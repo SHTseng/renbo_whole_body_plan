@@ -5,8 +5,10 @@ add_compile_options(-std=c++11)
 
 if(APPLE)
   set(DRAKE_PATH "$ENV{HOME}/drake-distro/build/install")
-else()
-  set(DRAKE_PATH "$ENV{HOME}/drake_catkin_ws/build/install")
+endif()
+
+if(UNIX AND NOT APPLE)
+  set(DRAKE_PATH "$ENV{HOME}/drake_catkin_ws/install")
 endif()
 
 

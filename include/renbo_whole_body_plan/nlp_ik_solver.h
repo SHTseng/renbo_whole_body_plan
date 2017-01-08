@@ -26,7 +26,7 @@ public:
 
   ~NLPIKSolver();
 
-  bool solve(const Eigen::Affine3d& eef_pose, std::vector<double>& solved_pose);
+  bool solve(const Eigen::Affine3d& desired_eef_pose, std::vector<double>& solved_pose);
 
 private:
 
