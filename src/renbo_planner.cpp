@@ -36,6 +36,8 @@ RenboPlanner::RenboPlanner():
 
   wb_jmg_ = ps_->getRobotModel()->getJointModelGroup(PLANNING_GROUP);
 
+  wb_joint_names_ = wb_jmg_->getJointModelNames();
+
   scg_ = std::shared_ptr<renbo_constraint_sampler::StableConfigGenerator>
       (new renbo_constraint_sampler::StableConfigGenerator(PLANNING_GROUP, SCALE_SP));
 
@@ -137,23 +139,23 @@ bool RenboPlanner::final_pose_planning(rrt_planner_msgs::Final_Pose_Planning::Re
 {
 //  scenario_ = req.scenerio;
 //  rviz_visual_tools_->deleteAllMarkers();
-//
-//  robot_state::RobotState robot_state_ = psm_->getPlanningScene()->getCurrentStateNonConst();
-//  robot_state_.setToDefaultValues();
-//  robot_state_.update();
-//
+
+  robot_state::RobotState robot_state_ = psm_->getPlanningScene()->getCurrentStateNonConst();
+  robot_state_.setToDefaultValues();
+  robot_state_.update();
+
 //  updatePSMRobotState(robot_state_);
 //  loadCollisionEnvironment(scenario_);
 //
 //  eef_original_config_ = robot_state_.getGlobalLinkTransform(eef_name_);
 //
-//  Eigen::Affine3d eef_pick_pose, eef_place_pose;
-//  if (!updatePickPlacePose(scenario_, eef_pick_pose, eef_place_pose))
-//  {
-//    ROS_INFO_STREAM("Can't update pick and place poses");
-//    return false;
-//  }
-//
+  Eigen::Affine3d eef_pick_pose, eef_place_pose;
+  if (!updatePickPlacePose(scenario_, eef_pick_pose, eef_place_pose))
+  {
+    ROS_INFO_STREAM("Can't update pick and place poses");
+    return false;
+  }
+
 //  fpp_->updateScene(psm_->getPlanningScene());
 //
 //  std::vector<double> pick_config(wb_jmg_->getVariableCount());
@@ -163,19 +165,26 @@ bool RenboPlanner::final_pose_planning(rrt_planner_msgs::Final_Pose_Planning::Re
 //    ROS_INFO_STREAM("Solve pick pose fail");
 //    return false;
 //  }
-//
+
 //  ROS_INFO_STREAM("Solved pick pose");
-//
-//  robot_state_.setVariablePositions(wb_joint_names_, pick_config);
-//  robot_state_.update();
-//
-//  moveit_msgs::DisplayRobotState robot_state_msgs;
-//  robot_state::robotStateToRobotStateMsg(robot_state_, robot_state_msgs.state);
-//  goal_state_publisher_.publish(robot_state_msgs);
 
-  ROS_INFO_STREAM("test drake");
+  ROS_INFO_STREAM("Start Drake nlopt IK");
 
-  fpp_->TEST();
+  std::map<std::string, double> jnt_pos_map;
+  std::map<std::string, double> solved_jnt_pos_map;
+  fpp_->TEST(eef_pick_pose, jnt_pos_map);
+
+  for (int i = 0; i < wb_joint_names_.size(); i++)
+  {
+    solved_jnt_pos_map.insert(std::pair<std::string, double>(wb_joint_names_[i], jnt_pos_map[wb_joint_names_[i]]));
+  }
+
+  robot_state_.setVariablePositions(solved_jnt_pos_map);
+  robot_state_.update();
+
+  moveit_msgs::DisplayRobotState robot_state_msgs;
+  robot_state::robotStateToRobotStateMsg(robot_state_, robot_state_msgs.state);
+  goal_state_publisher_.publish(robot_state_msgs);
 
   ROS_INFO_STREAM("test drake complete");
 

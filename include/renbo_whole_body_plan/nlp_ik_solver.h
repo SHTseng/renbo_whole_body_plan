@@ -26,16 +26,18 @@ public:
 
   ~NLPIKSolver();
 
-  bool solve(const Eigen::Affine3d& desired_eef_pose, std::vector<double>& solved_pose);
+  bool solve(const Eigen::Affine3d& desired_eef_pose, std::map<std::string, double>& jnt_pos_map);
 
 private:
+
+  void initialization();
 
   std::vector<int> GetJointPositionVectorIndices(const RigidBodyTreed* tree,
                                                    const std::string& name);
 
   void FindJointAndInsert(const RigidBodyTreed* model,
                           const std::string& name,
-                          std::vector<int>* const position_list);
+                          std::vector<int>& position_list);
 
   std::string urdf_path_;
 

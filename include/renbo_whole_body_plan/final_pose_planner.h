@@ -57,7 +57,7 @@ public:
 
   void updateScene(const planning_scene::PlanningScenePtr &scene);
 
-  bool TEST();
+  bool TEST(const Eigen::Affine3d& eef_pose, std::map<std::string, double>& jnt_pos_map);
 
 private:
 

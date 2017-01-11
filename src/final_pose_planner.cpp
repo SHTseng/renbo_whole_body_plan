@@ -248,13 +248,13 @@ void FinalPosePlanner::updateScene(const planning_scene::PlanningScenePtr &scene
   ps_ = scene;
 }
 
-bool FinalPosePlanner::TEST()
+bool FinalPosePlanner::TEST(const Eigen::Affine3d& eef_pose, std::map<std::string, double>& jnt_pos_map)
 {
-  robot_state::RobotState robot_state_(ps_->getRobotModel());
-  robot_state_.setToDefaultValues();
-  robot_state_.update();
+//  robot_state::RobotState robot_state_(ps_->getRobotModel());
+//  robot_state_.setToDefaultValues();
+//  robot_state_.update();
 
-  r_eef_config_ = robot_state_.getGlobalLinkTransform("r_gripper");
+//  r_eef_config_ = robot_state_.getGlobalLinkTransform("r_gripper");
 //
 //  Eigen::Affine3d read_r_eef_config = setRightGripperConfig(r_eef_config_);
 
@@ -294,8 +294,8 @@ bool FinalPosePlanner::TEST()
 
   bool rc = true;
 
-  std::vector<double> sln_pose;
-  nlp_ik_solver_->solve(r_eef_config_, sln_pose);
+  //std::vector<double> sln_pose;
+  nlp_ik_solver_->solve(eef_pose, jnt_pos_map);
 
   return rc;
 
