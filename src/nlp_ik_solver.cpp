@@ -21,7 +21,6 @@ bool NLPIKSolver::solve(const Eigen::Affine3d& desired_eef_pose, std::map<std::s
   drake::parsers::urdf::AddModelInstanceFromUrdfFileToWorld(urdf_path_,
                                                             drake::multibody::joints::kRollPitchYaw,
                                                             tree.get());
-ROS_INFO_STREAM(tree->get_num_positions());
 
   double inf = std::numeric_limits<double>::infinity();
   Eigen::Vector2d t_span;
@@ -29,10 +28,10 @@ ROS_INFO_STREAM(tree->get_num_positions());
 
   Eigen::VectorXd reach_start(tree->get_num_positions());
   reach_start << 0.0572, 0.0, 0.8, 0.0, 0.0, 0.0, // 5, floating base joint
-          0.0, 0.0, 0.0, 0.0, -0.316, // 10
-          0.0, 0.0, -0.316, 0.0, 0.0, // 15
-          0.63, 0.63, 0.0, 0.0, 0.0, // 20
-          0.0, 0.0, 0.0, -0.3923, 0.0, // 25
+          0.0, 0.0, 0.0, 0.0, -0.785, // 10
+          0.0, 0.0, -0.785, 0.0, 0.0, // 15
+          1.04, 1.04, 0.0, -0.523, 0.0, // 20
+          -0.523, 0.0, 0.0, -0.3923, 0.0, // 25
           0.0, 0.3923, 0.785, -0.785, -0.3923, // 30
           0.0, 0.3923, 0.0, 0.0, 0.0; // 35
 
@@ -50,30 +49,28 @@ ROS_INFO_STREAM(tree->get_num_positions());
   const Eigen::Vector3d origin(0, 0, 0);
 
   int l_foot = tree->FindBodyIndex("l_sole");
-  Eigen::Vector4d lfoot_quat(1, 0, 0, 0);
-//  Eigen::Vector4d lfoot_quat(0.5, 0.5, 0.5, 0.5);
+//  Eigen::Vector4d lfoot_quat(1, 0, 0, 0);
+  Eigen::Vector4d lfoot_quat(0.5, 0.5, 0.5, 0.5);
 
   auto lfoot_pos0 = tree->transformPoints(cache, origin, l_foot, 0);
   Eigen::Vector3d lfoot_pos_lb = lfoot_pos0;
 
-  std::cout << lfoot_pos_lb << std::endl;
-
   // Position and quaternion constraints are relaxed to make the problem
   // solvable by IPOPT.
   lfoot_pos_lb -= 0.01*Eigen::Vector3d::Ones();
-//  lfoot_pos_lb(2) += 0.08;
   Eigen::Vector3d lfoot_pos_ub = lfoot_pos0;
   lfoot_pos_ub += 0.01*Eigen::Vector3d::Ones();
-//  lfoot_pos_ub(2) += 0.08;
   WorldPositionConstraint kc_lfoot_pos(tree.get(), l_foot, origin, lfoot_pos_lb,
                                        lfoot_pos_ub, t_span);
+
   double tol = 0.5 / 180 * M_PI;
   WorldQuatConstraint kc_lfoot_quat(tree.get(), l_foot, lfoot_quat, tol, t_span);
 
   // 3 Right foot position and orientation constraint
   int r_foot = tree->FindBodyIndex("r_sole");
   auto rfoot_pos0 = tree->transformPoints(cache, origin, r_foot, 0);
-  Eigen::Vector4d rfoot_quat(1, 0, 0, 0);
+//  Eigen::Vector4d rfoot_quat(1, 0, 0, 0);
+  Eigen::Vector4d rfoot_quat(0.5, 0.5, 0.5, 0.5);
   Eigen::Vector3d rfoot_pos_lb = rfoot_pos0;
   rfoot_pos_lb -= 0.01 * Eigen::Vector3d::Ones();
   Eigen::Vector3d rfoot_pos_ub = rfoot_pos0;
@@ -92,9 +89,9 @@ ROS_INFO_STREAM(tree->get_num_positions());
 
   Eigen::VectorXd torso_nominal = Eigen::VectorXd::Zero(3);
   Eigen::VectorXd torso_half_range(3);
-  torso_half_range(0) = 15.0 / 180 * M_PI;
-  torso_half_range(1) = 25.0 / 180 * M_PI;
-  torso_half_range(2) = 45.0 / 180 * M_PI;
+  torso_half_range(0) = 60.0 / 180 * M_PI;
+  torso_half_range(1) = 0.576; //25.0 / 180 * M_PI
+  torso_half_range(2) = 0.7155; // 45.0/180.0*M_PI
   Eigen::VectorXd torso_lb = torso_nominal - torso_half_range;
   Eigen::VectorXd torso_ub = torso_nominal + torso_half_range;
 //  torso_lb(1) = -5.0 / 180 * M_PI;
@@ -108,14 +105,14 @@ ROS_INFO_STREAM(tree->get_num_positions());
   FindJointAndInsert(tree.get(), "r_knee_joint", knee_idx);
 
   Eigen::VectorXd knee_lb = Eigen::VectorXd::Zero(2);
-  knee_lb(0) = 0.0/180*M_PI;
-//  knee_lb(0) = -75.0/180*M_PI;
+//  knee_lb(0) = 0.0/180*M_PI;
+  knee_lb(0) = -90.0/180*M_PI;
 
   knee_lb(1) = 0.0/180*M_PI;
 
   Eigen::VectorXd knee_ub = Eigen::VectorXd::Zero(2);
-  knee_ub(0) = 9.0/180*M_PI;
-//  knee_ub(0) = 0.0/180*M_PI;
+//  knee_ub(0) = 90.0/180*M_PI;
+  knee_ub(0) = 0.0/180*M_PI;
   knee_ub(1) = 90.0/180*M_PI;
 
   kc_posture_knee.setJointLimits(2, knee_idx.data(), knee_lb, knee_ub);
@@ -156,18 +153,14 @@ ROS_INFO_STREAM(tree->get_num_positions());
   rarm_lb(3) = -0.2618;
   rarm_lb(4) = -1.57;
   rarm_lb(5) = -1.8;
-//  for (int i = 0; i < 6; i++)
-//  {
-//   rarm_lb(i) = reach_start(rarm_idx[i]);
-//  }
-//  Eigen::Matrix<double, 6, 1> rarm_ub = rarm_lb;
+
   Eigen::Matrix<double, 6, 1> rarm_ub;
   rarm_ub(0) = 2.193;
-  rarm_ub(0) = 1.57;
-  rarm_ub(0) = 1.57;
-  rarm_ub(0) = 2.0;
-  rarm_ub(0) = 1.57;
-  rarm_ub(0) = 1.8;
+  rarm_ub(1) = 1.57;
+  rarm_ub(2) = 1.57;
+  rarm_ub(3) = 2.0;
+  rarm_ub(4) = 1.57;
+  rarm_ub(5) = 1.8;
 
   kc_posture_rarm.setJointLimits(6, rarm_idx.data(), rarm_lb, rarm_ub);
 
@@ -192,47 +185,56 @@ ROS_INFO_STREAM(tree->get_num_positions());
 
 
   auto origin_r_gripper_pose = tree->transformPoints(cache, origin, r_gripper_idx, 0);
-  std::cout << "Original eef position \n" << origin_r_gripper_pose << std::endl;
+//  std::cout << "Original eef position \n" << origin_r_gripper_pose << std::endl;
 
-//  r_gripper_pos(0) = desired_eef_pose.translation().x();
-//  r_gripper_pos(1) = desired_eef_pose.translation().y();
-//  r_gripper_pos(2) = desired_eef_pose.translation().z();
+  std::string file_path = "/home/shtseng/catkin_ws/src/renbo_whole_body_plan/database/drake_ik_pt.dat";
+  std::vector<double> config;
 
-  r_gripper_pos(0) = origin_r_gripper_pose(0)+0.2; // 0.052
-  r_gripper_pos(1) = origin_r_gripper_pose(1)-0.05; // -0.153
-  r_gripper_pos(2) = origin_r_gripper_pose(2)+0.1;  // 0.793
+  if (!readConfigFromFile(file_path, config))
+  {
+    ROS_ERROR("Drake: Read config file fail");
+    return false;
+  }
+
+  r_gripper_pos(0) = origin_r_gripper_pose(0)+config[0]; // 0.052
+  r_gripper_pos(1) = origin_r_gripper_pose(1)+config[1]; // -0.153
+  r_gripper_pos(2) = origin_r_gripper_pose(2)+config[2];  // 0.793
 
   Eigen::VectorXd r_gripper_pos_lb = r_gripper_pos;
-  r_gripper_pos_lb(0) -= 0.001;
-  r_gripper_pos_lb(1) -= 0.001;
-  r_gripper_pos_lb(2) -= 0.001;
+  r_gripper_pos_lb(0) -= 0.01;
+  r_gripper_pos_lb(1) -= 0.01;
+  r_gripper_pos_lb(2) -= 0.01;
 
   Eigen::VectorXd r_gripper_pos_ub = r_gripper_pos;
-  r_gripper_pos_ub(0) += 0.001;
-  r_gripper_pos_ub(1) += 0.001;
-  r_gripper_pos_ub(2) += 0.001;
+  r_gripper_pos_ub(0) += 0.01;
+  r_gripper_pos_ub(1) += 0.01;
+  r_gripper_pos_ub(2) += 0.01;
 
   WorldPositionConstraint kc_r_gripper_pos(tree.get(), r_gripper_idx, origin,
                                        r_gripper_pos_lb, r_gripper_pos_ub, t_span);
 
- tol = 0.1 / 180.0 * M_PI;
-  Eigen::Vector4d r_gripper_quat(0.7071, 0.707, 0.0, 0.0);
+  tol = 0.5 / 180.0 * M_PI;
+  Eigen::Vector4d r_gripper_quat(0.7071, 0.7071, 0.0, 0.0);
   WorldQuatConstraint kc_r_gripper_quat(tree.get(), r_gripper_idx, r_gripper_quat, tol, t_span);
 
+  int root_link = tree->FindBodyIndex("base_link");
+  WorldFixedBodyPoseConstraint kc_fixed_com(tree.get(), root_link, t_span);
+
+  // TODO: WorldCoMConstraint
   // -----------------solve-----------------------------------------------------
   std::vector<RigidBodyConstraint*> constraint_array;
   constraint_array.push_back(&kc_posture_neck);
   constraint_array.push_back(&kc_lfoot_pos);
-//  constraint_array.push_back(&kc_lfoot_quat);
+  constraint_array.push_back(&kc_lfoot_quat);
   constraint_array.push_back(&kc_rfoot_pos);
-//  constraint_array.push_back(&kc_rfoot_quat);
-//  constraint_array.push_back(&kc_posture_torso);
-//  constraint_array.push_back(&kc_posture_knee);
+  constraint_array.push_back(&kc_rfoot_quat);
+  constraint_array.push_back(&kc_posture_torso);
+  constraint_array.push_back(&kc_posture_knee);
 //  constraint_array.push_back(&kc_posture_larm);
-//  constraint_array.push_back(&kc_posture_rarm);
+  constraint_array.push_back(&kc_posture_rarm);
 //  constraint_array.push_back(&kc_quasi);
   constraint_array.push_back(&kc_r_gripper_pos);
-//  constraint_array.push_back(&kc_r_gripper_quat);
+  constraint_array.push_back(&kc_r_gripper_quat);
 
   IKoptions ikoptions(tree.get());
   Eigen::VectorXd q_sol(tree->get_num_positions());
@@ -242,30 +244,33 @@ ROS_INFO_STREAM(tree->get_num_positions());
   inverseKin(tree.get(), q_nom, q_nom, constraint_array.size(),
             constraint_array.data(), ikoptions, &q_sol, &info,
             &infeasible_constraint);
+
   ROS_INFO("info = %d\n", info);
+
   for (auto i : infeasible_constraint)
     std::cout << i << std::endl;
 
   Eigen::Vector3d com_orig = tree->centerOfMass(cache);
 
-  ROS_INFO("com position \n %5.6f\n%5.6f\n%5.6f\n", com_orig(0), com_orig(1), com_orig(2));
+//  ROS_INFO("com position \n %5.6f\n%5.6f\n%5.6f\n", com_orig(0), com_orig(1), com_orig(2));
 
   cache = tree->doKinematics(q_sol);
   Eigen::Vector3d com = tree->centerOfMass(cache);
 
-  ROS_INFO("com position \n %5.6f\n%5.6f\n%5.6f\n", com(0), com(1), com(2));
+//  ROS_INFO("com position \n %5.6f\n%5.6f\n%5.6f\n", com(0), com(1), com(2));
 
   auto solved_r_gripper_pose = tree->transformPoints(cache, origin, r_gripper_idx, 0);
   auto solved_r_sole_pose = tree->transformPoints(cache, origin, r_foot, 0);
   auto solved_l_sole_pose = tree->transformPoints(cache, origin, l_foot, 0);
 
-  std::cout << "r_gripper:\n" << solved_r_gripper_pose << std::endl;
-  std::cout << "l_sole:\n" << solved_r_sole_pose << std::endl;
-  std::cout << "r_sole:\n" << solved_l_sole_pose << std::endl;
+  std::cout << "CoM diff:\n" << com(0)-com_orig(0) << " " << com(1)-com_orig(1) << " " << com(2)-com_orig(2) << "\n\n";
+  std::cout << "End-effector diff:\n" << solved_r_gripper_pose(0)-origin_r_gripper_pose(0)
+            << " " << solved_r_gripper_pose(1)-origin_r_gripper_pose(1)
+            << " " << solved_r_gripper_pose(2)-origin_r_gripper_pose(2) << "\n\n";
+
 
   for (int i = 6; i < tree->get_num_positions(); i++)
   {
-   ROS_INFO_STREAM(i << " " << tree->get_position_name(i) << ": " << q_sol(i));
    jnt_pos_map.insert(std::pair<std::string, double>(tree->get_position_name(i), q_sol(i)));
   }
 
@@ -277,6 +282,28 @@ ROS_INFO_STREAM(tree->get_num_positions());
 //  jnt_pos_map["r_hip_roll_joint"] *= (-1);
 //  jnt_pos_map["r_hip_yaw_joint"] *= (-1);
 
+
+  return true;
+}
+
+bool NLPIKSolver::readConfigFromFile(const std::string& path, std::vector<double>& read_conifg)
+{
+//  std::ifstream read_file("/home/shtseng/catkin_ws/src/renbo_whole_body_plan/database/drake_ik_pt.dat", std::ios::in);
+  std::ifstream read_file(path, std::ios::in);
+
+  if (!read_file)
+  {
+    ROS_ERROR("Drake: Open config file fail");
+    return false;
+  }
+
+  double temp = 0.0;
+  while(read_file >> temp)
+  {
+    read_conifg.push_back(temp);
+  }
+
+  read_file.close();
 
   return true;
 }

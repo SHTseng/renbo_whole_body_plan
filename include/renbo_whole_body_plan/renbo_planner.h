@@ -61,7 +61,8 @@ private:
 
   void updatePSMRobotState(const robot_state::RobotState& state);
 
-  bool updatePickPlacePose(const int& scenerio, Eigen::Affine3d& pick_pose, Eigen::Affine3d& place_pose);
+  bool updatePickPlacePose(const int& scenerio, Eigen::Affine3d& pick_pose, Eigen::Affine3d& place_pose,
+                           Eigen::Affine3d &pick_waist_pose, Eigen::Affine3d &place_waist_pose);
 
   void triggerPlanningSceneUpade();
 
@@ -95,6 +96,8 @@ private:
 
   std::string eef_name_;
 
+  std::string waist_name_;
+
   std::string package_name_;
 
   std::string package_path_;
@@ -104,6 +107,8 @@ private:
   rviz_visual_tools::RvizVisualToolsPtr rviz_visual_tools_;
 
   Eigen::Affine3d eef_original_config_;
+
+  Eigen::Affine3d waist_original_config_;
 
   //GENERAL PARAMS
   std::string ROBOT_DESCRIPTION;      // name of the robot description (a param name, so it can be changed externally)

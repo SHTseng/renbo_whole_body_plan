@@ -1,9 +1,6 @@
 #ifndef NLP_IK_SOLVER_
 #define NLP_IK_SOLVER_
 
-#include <iostream>
-#include <numeric>
-
 #include <ros/ros.h>
 
 #include "drake/multibody/ik_options.h"
@@ -18,6 +15,10 @@
 #include "drake/multibody/parsers/urdf_parser.h"
 #include "drake/multibody/rigid_body_tree.h"
 
+#include <iostream>
+#include <numeric>
+#include <fstream>
+
 class NLPIKSolver
 {
 public:
@@ -31,6 +32,8 @@ public:
 private:
 
   void initialization();
+
+  bool readConfigFromFile(const std::string& path, std::vector<double> &read_conifg);
 
   std::vector<int> GetJointPositionVectorIndices(const RigidBodyTreed* tree,
                                                    const std::string& name);

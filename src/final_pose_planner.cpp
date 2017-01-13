@@ -66,12 +66,20 @@ void FinalPosePlanner::initilize()
 }
 
 bool FinalPosePlanner::solveFinalPose(moveit::core::RobotState &robot_state_,
-                                      const Eigen::Affine3d& r_eef_config_,
+                                      const Eigen::Affine3d& eef_config_,
+                                      const Eigen::Affine3d& waist_config_,
                                       std::vector<double>& solution)
 {
   Eigen::Affine3d desired_waist_config_eigen = setWaistConfig(robot_state_.getGlobalLinkTransform("waist"));
+  std::cout << "read from file waist config" << std::endl;
+  std::cout << desired_waist_config_eigen.translation() << std::endl;
+  std::cout << desired_waist_config_eigen.linear() << std::endl;
 
-  KDL::Frame desired_waist_config = EigenToKDL(desired_waist_config_eigen);
+  std::cout << "parsed waist config" << std::endl;
+  std::cout << waist_config_.translation() << std::endl;
+  std::cout << waist_config_.linear() << std::endl;
+
+  KDL::Frame desired_waist_config = EigenToKDL(waist_config_);
 
   KDL::ChainFkSolverPos_recursive fk_solver = KDL::ChainFkSolverPos_recursive(right_leg_chain_);
   KDL::ChainIkSolverVel_pinv ik_pinv = KDL::ChainIkSolverVel_pinv(right_leg_chain_);
@@ -128,27 +136,21 @@ bool FinalPosePlanner::solveFinalPose(moveit::core::RobotState &robot_state_,
 
   ik_check = robot_state_.setFromIK(l_leg_jmg_, left_foot_config, 1, 0);
 
-  if (ik_check)
-  {
-    robot_state_.update();
-  }
-  else
+  if (!ik_check)
   {
     ROS_WARN_NAMED("final pose planner", "solve left leg ik fail");
     ik_check = false;
     return ik_check;
   }
+  robot_state_.update();
 
-  ik_check = robot_state_.setFromIK(right_arm_torso_jmg_, r_eef_config_, 1, 0);
-  if (ik_check)
-  {
-    robot_state_.update();
-  }
-  else
+  ik_check = robot_state_.setFromIK(right_arm_torso_jmg_, eef_config_, 1, 0);
+  if (!ik_check)
   {
     ROS_WARN_NAMED("final pose planner", "solve right eef ik fail");
     ik_check = false;
   }
+  robot_state_.update();
 
   robot_state_.copyJointGroupPositions(wb_jmg_, solution);
 

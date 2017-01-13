@@ -5,6 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Grid1/Offset1
+        - /RobotState1
         - /RobotState2
         - /RobotState2/Links1/r_gripper1
         - /RobotState2/Links1/r_gripper1/Position1
@@ -228,7 +229,7 @@ Visualization Manager:
       Show All Links: true
       Show Highlights: true
       Value: true
-      Visual Enabled: false
+      Visual Enabled: true
     - Attached Body Color: 150; 50; 150
       Class: moveit_rviz_plugin/RobotState
       Collision Enabled: false
@@ -415,7 +416,7 @@ Visualization Manager:
       Show All Links: true
       Show Highlights: true
       Value: true
-      Visual Enabled: true
+      Visual Enabled: false
     - Alpha: 1
       Class: rviz/Polygon
       Color: 25; 255; 0
@@ -646,7 +647,7 @@ Visualization Manager:
             Show Axes: false
             Show Trail: false
             Value: true
-        Robot Alpha: 1
+        Robot Alpha: 0.5
         Show Robot Collision: false
         Show Robot Visual: false
       Value: true
@@ -853,7 +854,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 4.51933002
+      Distance: 3.43799114
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
@@ -867,10 +868,10 @@ Visualization Manager:
       Focal Shape Size: 0.0500000007
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.334796906
+      Pitch: 0.484797001
       Target Frame: base_footprint
       Value: XYOrbit (rviz)
-      Yaw: 5.94987917
+      Yaw: 5.90407562
     Saved: ~
 Window Geometry:
   Displays:

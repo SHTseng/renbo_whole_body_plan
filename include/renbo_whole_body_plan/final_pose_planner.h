@@ -50,7 +50,8 @@ public:
   ~FinalPosePlanner();
 
   bool solveFinalPose(moveit::core::RobotState& robot_state_,
-                      const Eigen::Affine3d &r_eef_config_,
+                      const Eigen::Affine3d& eef_config_,
+                      const Eigen::Affine3d& waist_config,
                       std::vector<double> &solution);
 
   Eigen::Affine3d setRightGripperConfig(Eigen::Affine3d original_config);

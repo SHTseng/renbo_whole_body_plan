@@ -84,6 +84,7 @@ int main(int argc, char* argv[])
     ros::ServiceClient final_pose_planning_ = nh_.serviceClient<rrt_planner_msgs::Final_Pose_Planning>("final_pose_planning");
 
     rrt_planner_msgs::Final_Pose_Planning final_pose_planning_srv;
+    final_pose_planning_srv.request.scenerio = SCENERIO;
 
     if (final_pose_planning_.call(final_pose_planning_srv))
     {

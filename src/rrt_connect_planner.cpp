@@ -67,13 +67,17 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
   if (isGrasped)
   {
     ps_->processAttachedCollisionObjectMsg(attached_collision_object_);
-    robot_state_ = ps_->getCurrentStateNonConst();
 
+    robot_state_ = ps_->getCurrentStateNonConst();
     bool hasAB = robot_state_.hasAttachedBody("cup");
     if (hasAB)
+    {
       ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "receive attach collision object");
+    }
     else
+    {
       ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "no attach collision object");
+    }
   }
 
 
@@ -88,6 +92,7 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
 
   start_time = ros::Time::now();
 
+  ROS_INFO("RRT planner: start iteration");
   for (int i = 0; i < max_iter; i++)
   {
     getRandomStableConfig(q_rand);
