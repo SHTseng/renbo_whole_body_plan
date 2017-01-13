@@ -1,5 +1,10 @@
 #include <renbo_whole_body_plan/rrt_connect_planner.h>
 
+#include <boost/date_time/gregorian/gregorian.hpp>
+#include <boost/date_time.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+
+
 namespace renbo_planner
 {
 
@@ -11,7 +16,7 @@ RRTConnectPlanner::RRTConnectPlanner(std::string group_name, std::string databas
   base_frame_("r_sole"),
   eef_name_("r_gripper"),
   verbose_(false),
-  step_size_(0.1)
+  step_size_(0.05)
 {
   robot_model_loader_.reset(new robot_model_loader::RobotModelLoader("robot_description"));
 
@@ -67,19 +72,18 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
   if (isGrasped)
   {
     ps_->processAttachedCollisionObjectMsg(attached_collision_object_);
-
     robot_state_ = ps_->getCurrentStateNonConst();
-    bool hasAB = robot_state_.hasAttachedBody("cup");
-    if (hasAB)
-    {
-      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "receive attach collision object");
-    }
-    else
-    {
-      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "no attach collision object");
-    }
-  }
 
+//    bool hasAB = robot_state_.hasAttachedBody("cup");
+//    if (hasAB)
+//    {
+//      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "receive attach collision object");
+//    }
+//    else
+//    {
+//      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "no attach collision object");
+//    }
+  }
 
   moveit_msgs::DisplayTrajectory sln_traj;
   node q_rand, q_near;
@@ -89,6 +93,13 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
 
   ros::Time start_time, end_time;
   ros::Duration dura;
+
+  if (!loadDSDatabase(database_path_))
+  {
+    ROS_ERROR("Load database fail fail");
+    return sln_traj;
+  }
+  ros::Duration(2.0).sleep();
 
   start_time = ros::Time::now();
 
@@ -633,7 +644,10 @@ void RRTConnectPlanner::writePath(tree T_start, tree T_goal, node q_near, int co
   bool shorcut_flag = false;
   shorcut_flag = pathShortCutter(solution_path_configs_, shortcutted_path, num_intermediate_waypoints_approach);
 
-  ROS_INFO_STREAM("Found short cut path");
+  if (shorcut_flag)
+  {
+    ROS_INFO_STREAM("Found short cut path");
+  }
 
   if (visualize_path_)
   {
@@ -655,8 +669,22 @@ void RRTConnectPlanner::writePath(tree T_start, tree T_goal, node q_near, int co
     // generate trajectory from solution path
     generateTrajectory(shortcutted_path, shortcutted_path.size(), trajectory);
 
-    //solution_file_path.append("whole_body_trajectory.txt");
-    solution_file_path = "/home/shtseng/catkin_ws/src/renbo_whole_body_plan/trajectory/whole_body_trajectory.txt";
+    // record current time and add to file
+    boost::gregorian::date dayte(boost::gregorian::day_clock::local_day());
+    boost::posix_time::ptime midnight(dayte);
+    boost::posix_time::ptime now(boost::posix_time::microsec_clock::local_time());
+    boost::posix_time::time_duration td = now - midnight;
+
+    std::stringstream sstream;
+
+    sstream << dayte.year() << "-" << dayte.month().as_number()
+         << "-" << dayte.day() << "-";
+
+    sstream << td.hours() << "-" << td.minutes() << "-" << td.seconds();
+
+    solution_file_path = "/home/shtseng/catkin_ws/src/renbo_whole_body_plan/trajectory/whole_body_trajectory-"
+        + sstream.str() + ".txt";
+
     std::ofstream solution_path;
     solution_path.open(solution_file_path.c_str());
 
@@ -834,8 +862,9 @@ bool RRTConnectPlanner::pathShortCutter(Trajectory raw_path, Trajectory &shortcu
   }
   else
   {
-    ROS_INFO_STREAM("Path shortcut fail");
-    return false;
+    ROS_ERROR_STREAM("Path shortcut fail, return invalid raw path");
+    linearInterpolation(path_temp, shortcutted_path, num_intermediate_waypoints);
+//    return false;
   }
 
   return true;
@@ -893,6 +922,10 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::interpolateWaypoints(std::vect
     increment += 1.0;
   }
 
+  if (isGrasped)
+  {
+    initial_state_msgs.attached_collision_objects.push_back(attached_collision_object_);
+  }
   initial_state_msgs.joint_state.name.resize(wb_num_joint_);
   initial_state_msgs.joint_state.position.resize(wb_num_joint_);
 
@@ -944,13 +977,13 @@ void RRTConnectPlanner::linearInterpolation(Trajectory short_path,
 
 void RRTConnectPlanner::getRandomStableConfig(node &sample)
 {
-  if (ds_database_configs_.empty())
-  {
-    if (!loadDSDatabase(database_path_))
-    {
-      ROS_ERROR("Load database fail fail");
-    }
-  }
+//  if (ds_database_configs_.empty())
+//  {
+//    if (!loadDSDatabase(database_path_))
+//    {
+//      ROS_ERROR("Load database fail fail");
+//    }
+//  }
 
   int lb = 0, ub = ds_database_config_count_ - 1;
   int rnd_idx = floor(rng_.uniformReal(lb, ub));
@@ -1076,6 +1109,28 @@ bool RRTConnectPlanner::checkCollision(const moveit::core::RobotState& state)
   collision_detection::CollisionRequest collision_req;
   collision_detection::CollisionResult collision_res;
   collision_detection::AllowedCollisionMatrix acm_ = ps_->getAllowedCollisionMatrix();
+
+//  ps_->setCurrentState(state);
+
+//  robot_state::RobotState state_ = ps_->getCurrentStateNonConst();
+//  if (isGrasped)
+//  {
+//    if (!state_.hasAttachedBody("cup"))
+//    {
+//      ps_->processAttachedCollisionObjectMsg(attached_collision_object_);
+//    }
+
+//    bool hasAB = state_.hasAttachedBody("cup");
+//    if (hasAB)
+//    {
+//      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "check collision: receive attach collision object");
+//    }
+//    else
+//    {
+//      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "check collision: no attach collision object");
+//    }
+//    ros::Duration(2.0).sleep();
+//  }
 
   collision_req.group_name = group_name_;
   collision_res.clear();
@@ -1267,6 +1322,70 @@ bool RRTConnectPlanner::TEST(int test_flag)
 
       robot_state_publisher_.publish(robot_state_msg_);
       ros::Duration(0.1).sleep();
+    }
+
+  }
+  else if (test_flag == 2)
+  {
+    moveit_msgs::DisplayRobotState state_msg_;
+
+    robot_state::RobotState state = ps_->getCurrentStateNonConst();
+    state.setToDefaultValues();
+    state.update();
+
+    state.setVariablePositions(wb_joint_names_, tree_goal_.nodes[0].config);
+    state.update();
+
+//    ps_->setCurrentState(state);
+//    ps_->getCurrentStateNonConst().update();
+
+//    bool hasAB = state.hasAttachedBody("cup");
+//    if (hasAB)
+//    {
+//      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "receive attach collision object");
+//      std::vector<AttachedBody> ab_;
+//      const EigenSTL::vector_Affine3d abs_config = state.getAttachedBody("cup")->getGlobalCollisionBodyTransforms();
+//      std::cout << abs_config[0].translation() << std::endl;
+//      std::cout << abs_config[0].linear() << std::endl;
+//    }
+//    else
+//    {
+//      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "TEST: no attach collision object");
+//      ps_->processAttachedCollisionObjectMsg(attached_collision_object_);
+//    }
+
+    bool collision_free = checkCollision(state);
+    if (collision_free)
+    {
+      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_BLUE << "robot is in collision free");
+
+      robot_state::robotStateToRobotStateMsg(state, state_msg_.state);
+      robot_state_publisher_.publish(state_msg_);
+    }
+    else
+    {
+      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_BLUE << "robot is in collision");
+
+      std_msgs::ColorRGBA collide_color;
+      collide_color.r = 1.0;
+      collide_color.g = 0.0;
+      collide_color.b = 0.0;
+      collide_color.a = 1.0;
+
+      robot_state::robotStateToRobotStateMsg(state, state_msg_.state);
+
+      const std::vector<const moveit::core::LinkModel*>& link_models = state.getRobotModel()->getLinkModelsWithCollisionGeometry();
+
+      state_msg_.highlight_links.resize(link_models.size());
+
+      for (std::size_t i = 0; i < wb_link_names_.size(); i++)
+      {
+        state_msg_.highlight_links[i].id = link_models[i]->getName();
+        state_msg_.highlight_links[i].color = collide_color;
+      }
+
+      robot_state_publisher_.publish(state_msg_);
+      ros::Duration(0.5).sleep();
     }
 
   }

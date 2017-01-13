@@ -2,8 +2,8 @@
 planning_group: whole_body_fixed
 scale_sp: 0.8
 write_path: true 
-verbose: true
-test_flag: 0
+verbose: false
+test_flag: 2
 scenario: 0
 
 #------ file path

@@ -70,14 +70,14 @@ bool FinalPosePlanner::solveFinalPose(moveit::core::RobotState &robot_state_,
                                       const Eigen::Affine3d& waist_config_,
                                       std::vector<double>& solution)
 {
-  Eigen::Affine3d desired_waist_config_eigen = setWaistConfig(robot_state_.getGlobalLinkTransform("waist"));
-  std::cout << "read from file waist config" << std::endl;
-  std::cout << desired_waist_config_eigen.translation() << std::endl;
-  std::cout << desired_waist_config_eigen.linear() << std::endl;
+//  Eigen::Affine3d desired_waist_config_eigen = setWaistConfig(robot_state_.getGlobalLinkTransform("waist"));
+//  std::cout << "read from file waist config" << std::endl;
+//  std::cout << desired_waist_config_eigen.translation() << std::endl;
+//  std::cout << desired_waist_config_eigen.linear() << std::endl;
 
-  std::cout << "parsed waist config" << std::endl;
-  std::cout << waist_config_.translation() << std::endl;
-  std::cout << waist_config_.linear() << std::endl;
+//  std::cout << "parsed waist config" << std::endl;
+//  std::cout << waist_config_.translation() << std::endl;
+//  std::cout << waist_config_.linear() << std::endl;
 
   KDL::Frame desired_waist_config = EigenToKDL(waist_config_);
 
