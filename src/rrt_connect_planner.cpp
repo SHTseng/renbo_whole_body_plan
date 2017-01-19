@@ -4,6 +4,8 @@
 #include <boost/date_time.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
+#include <eigen_conversions/eigen_msg.h>
+
 
 namespace renbo_planner
 {
@@ -16,6 +18,7 @@ RRTConnectPlanner::RRTConnectPlanner(std::string group_name, std::string databas
   base_frame_("r_sole"),
   eef_name_("r_gripper"),
   verbose_(false),
+  is_grasped(false),
   step_size_(0.05)
 {
   robot_model_loader_.reset(new robot_model_loader::RobotModelLoader("robot_description"));
@@ -23,6 +26,8 @@ RRTConnectPlanner::RRTConnectPlanner(std::string group_name, std::string databas
   ps_ = std::shared_ptr<planning_scene::PlanningScene>(new planning_scene::PlanningScene(robot_model_loader_->getModel()));
 
   wb_jmg_ = ps_->getRobotModel()->getJointModelGroup(group_name_);
+
+  rarm_torso_jmg_ = ps_->getRobotModel()->getJointModelGroup("right_arm_torso");
 
   l_leg_jmg_ = ps_->getRobotModel()->getJointModelGroup("left_leg");
 
@@ -60,6 +65,7 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
 {
 //  rviz_visual_tools_->deleteAllMarkers();
   ROS_INFO_STREAM("start query path between initial and goal state");
+  step_size_ = max_step_size;
 
   robot_state::RobotState robot_state_ = ps_->getCurrentStateNonConst();
   robot_state_.setToDefaultValues();
@@ -69,20 +75,11 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
   state_.setToDefaultValues();
   state_.update();
 
-  if (isGrasped)
+  if (is_grasped)
   {
     ps_->processAttachedCollisionObjectMsg(attached_collision_object_);
     robot_state_ = ps_->getCurrentStateNonConst();
-
-//    bool hasAB = robot_state_.hasAttachedBody("cup");
-//    if (hasAB)
-//    {
-//      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "receive attach collision object");
-//    }
-//    else
-//    {
-//      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "no attach collision object");
-//    }
+    ros::Duration(2.0).sleep();
   }
 
   moveit_msgs::DisplayTrajectory sln_traj;
@@ -323,8 +320,6 @@ status RRTConnectPlanner::extendTree(tree &input_tree, node q_rand, node &q_near
     }
     else
     {
-      ps_->setCurrentState(state);
-
       bool collision_free = false;
       collision_free = checkCollision(state);
 
@@ -341,7 +336,7 @@ status RRTConnectPlanner::extendTree(tree &input_tree, node q_rand, node &q_near
           ROS_INFO_STREAM("current proccesing node: " << input_tree.nodes.back().index);
 
           moveit_msgs::DisplayRobotState robot_state_msg_;
-          robot_state::robotStateToRobotStateMsg(robot_state_, robot_state_msg_.state);
+          robot_state::robotStateToRobotStateMsg(state, robot_state_msg_.state);
           robot_state_publisher_.publish(robot_state_msg_);
 
           ros::Duration(0.05).sleep();
@@ -372,6 +367,7 @@ status RRTConnectPlanner::extendTree(tree &input_tree, node q_rand, node &q_near
           }
 
           robot_state_publisher_.publish(robot_state_msg_);
+          ros::Duration(0.05).sleep();
 
           ROS_INFO_STREAM("extend tree: state in collision return trapped");
         }
@@ -401,15 +397,6 @@ status RRTConnectPlanner::extendTree(tree &input_tree, node q_rand, node &q_near
 
 status RRTConnectPlanner::connectTree(tree &input_tree, node q_connect, node &q_near, moveit::core::RobotState& state)
 {
-//  if (isGrasped)
-//  {
-//    bool hasAB = state.hasAttachedBody("cup");
-//    if (hasAB)
-//      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "connect_tree: receive attach collision object");
-//    else
-//      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "connect_tree: no attach collision object");
-//  }
-
   status stat = ADVANCED;
   node current_q_near;
   int prev_node_index = -1;
@@ -722,10 +709,11 @@ void RRTConnectPlanner::generateTrajectory(std::vector<std::vector<double> > pat
     start_state.joint_state.position[i] = path[0][i];
   }
 
-  if (isGrasped)
+  if (is_grasped)
   {
     start_state.attached_collision_objects.push_back(attached_collision_object_);
   }
+  //start_state.is_diff = true;
 
   //start_state.multi_dof_joint_state.joint_names.push_back("virtual_joint");
 
@@ -763,10 +751,12 @@ void RRTConnectPlanner::generateTrajectory(std::vector<std::vector<double> > pat
     initial_configuration[wb_joint_names_[i]] = moveit_robot_traj.joint_trajectory.points[0].positions[i];
   }
 
-  robot_state::RobotState init_state(ps_->getRobotModel());
+//  robot_state::RobotState init_state(ps_->getRobotModel());
+  robot_state::RobotState init_state = ps_->getCurrentStateNonConst();
 
   init_state.setToDefaultValues();
   init_state.setVariablePositions(initial_configuration);
+  init_state.update();
 
   robot_trajectory::RobotTrajectory robot_traj(ps_->getRobotModel(), group_name_);
   robot_traj.setRobotTrajectoryMsg(init_state, moveit_robot_traj);
@@ -808,19 +798,24 @@ bool RRTConnectPlanner::pathShortCutter(Trajectory raw_path, Trajectory &shortcu
   goal_config = raw_path.back();
 
   bool reach_goal = false;
-  int loop_count = 0, max_interation = 500;
+  int loop_count = 0, max_iteration = 500;
 
   moveit_msgs::RobotTrajectory current_robot_trajectory_msgs;
   moveit_msgs::DisplayTrajectory waypoint_interpolate;
 
   path_temp.push_back(raw_path[0]);
 
-  while (reach_goal != true && loop_count < max_interation)
+  while (reach_goal != true && loop_count < max_iteration)
   {
+    if (current_start_index == raw_path.size()-1)
+    {
+      break;
+    }
+
     waypoint_interpolate = interpolateWaypoints(start_config, goal_config, num_intermediate_waypoints);
     current_robot_trajectory_msgs = waypoint_interpolate.trajectory.at(0);
 
-    if (ps_->isPathValid(waypoint_interpolate.trajectory_start, current_robot_trajectory_msgs))
+    if (ps_->isPathValid(waypoint_interpolate.trajectory_start, current_robot_trajectory_msgs, group_name_, false))
     {
       path_temp.push_back(goal_config);
       reach_goal = true;
@@ -831,7 +826,7 @@ bool RRTConnectPlanner::pathShortCutter(Trajectory raw_path, Trajectory &shortcu
       {
         current_goal_config = raw_path[i];
 
-        if (i == current_start_index)
+        if (current_start_index == i)
         {
           start_config = raw_path[i+1];
           current_start_index = i+1;
@@ -842,11 +837,12 @@ bool RRTConnectPlanner::pathShortCutter(Trajectory raw_path, Trajectory &shortcu
         waypoint_interpolate = interpolateWaypoints(start_config, current_goal_config, num_intermediate_waypoints);
         current_robot_trajectory_msgs = waypoint_interpolate.trajectory.at(0);
 
-        if (ps_->isPathValid(waypoint_interpolate.trajectory_start, current_robot_trajectory_msgs))
+        if (ps_->isPathValid(waypoint_interpolate.trajectory_start, current_robot_trajectory_msgs, group_name_, false))
         {
           start_config = current_goal_config;
           current_start_index = i;
           path_temp.push_back(current_goal_config);
+
           break;
         }
       }
@@ -922,10 +918,6 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::interpolateWaypoints(std::vect
     increment += 1.0;
   }
 
-  if (isGrasped)
-  {
-    initial_state_msgs.attached_collision_objects.push_back(attached_collision_object_);
-  }
   initial_state_msgs.joint_state.name.resize(wb_num_joint_);
   initial_state_msgs.joint_state.position.resize(wb_num_joint_);
 
@@ -933,6 +925,15 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::interpolateWaypoints(std::vect
   {
     initial_state_msgs.joint_state.name[i] = wb_joint_names_[i];
     initial_state_msgs.joint_state.position[i] = waypoint_start[i];
+  }
+
+  if (is_grasped)
+  {
+    robot_state::RobotState state = ps_->getCurrentStateNonConst();
+    state.setVariablePositions(wb_joint_names_, waypoint_start);
+    state.update();
+
+    robot_state::robotStateToRobotStateMsg(state, initial_state_msgs, true);
   }
 
   //initial_state_msgs.multi_dof_joint_state.joint_names.push_back("virtual_joint");
@@ -1110,28 +1111,6 @@ bool RRTConnectPlanner::checkCollision(const moveit::core::RobotState& state)
   collision_detection::CollisionResult collision_res;
   collision_detection::AllowedCollisionMatrix acm_ = ps_->getAllowedCollisionMatrix();
 
-//  ps_->setCurrentState(state);
-
-//  robot_state::RobotState state_ = ps_->getCurrentStateNonConst();
-//  if (isGrasped)
-//  {
-//    if (!state_.hasAttachedBody("cup"))
-//    {
-//      ps_->processAttachedCollisionObjectMsg(attached_collision_object_);
-//    }
-
-//    bool hasAB = state_.hasAttachedBody("cup");
-//    if (hasAB)
-//    {
-//      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "check collision: receive attach collision object");
-//    }
-//    else
-//    {
-//      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "check collision: no attach collision object");
-//    }
-//    ros::Duration(2.0).sleep();
-//  }
-
   collision_req.group_name = group_name_;
   collision_res.clear();
 
@@ -1195,14 +1174,6 @@ bool RRTConnectPlanner::TEST(int test_flag)
     robot_state_publisher_.publish(robot_state_msg_);
 
     ps_->setCurrentState(current_state);
-
-//    moveit_msgs::PlanningScene planning_scene_msg;
-//    ps_->getPlanningSceneMsg(planning_scene_msg);
-
-//    planning_scene_msg.is_diff = true;
-//    planning_scene_msg.robot_state.is_diff = true;
-
-//    scene_publisher_.publish(planning_scene_msg);
 
     bool collision_free = false;
     collision_free = checkCollision(current_state);
@@ -1274,14 +1245,6 @@ bool RRTConnectPlanner::TEST(int test_flag)
 
     ps_->setCurrentState(current_state);
 
-//    moveit_msgs::PlanningScene planning_scene_msg;
-//    ps_->getPlanningSceneMsg(planning_scene_msg);
-
-//    planning_scene_msg.is_diff = true;
-//    planning_scene_msg.robot_state.is_diff = true;
-
-//    scene_publisher_.publish(planning_scene_msg);
-
     bool collision_free = false;
     collision_free = checkCollision(current_state);
 
@@ -1336,23 +1299,21 @@ bool RRTConnectPlanner::TEST(int test_flag)
     state.setVariablePositions(wb_joint_names_, tree_goal_.nodes[0].config);
     state.update();
 
-//    ps_->setCurrentState(state);
-//    ps_->getCurrentStateNonConst().update();
+    ps_->setCurrentState(state);
+    ps_->processAttachedCollisionObjectMsg(attached_collision_object_);
 
-//    bool hasAB = state.hasAttachedBody("cup");
-//    if (hasAB)
-//    {
-//      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "receive attach collision object");
-//      std::vector<AttachedBody> ab_;
-//      const EigenSTL::vector_Affine3d abs_config = state.getAttachedBody("cup")->getGlobalCollisionBodyTransforms();
-//      std::cout << abs_config[0].translation() << std::endl;
-//      std::cout << abs_config[0].linear() << std::endl;
-//    }
-//    else
-//    {
-//      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "TEST: no attach collision object");
-//      ps_->processAttachedCollisionObjectMsg(attached_collision_object_);
-//    }
+//    ROS_INFO_STREAM(attached_collision_object_.object.primitive_poses[0].Point.x);
+//    ROS_INFO_STREAM(attached_collision_object_.object.primitive_poses[0].Point.y);
+//    ROS_INFO_STREAM(attached_collision_object_.object.primitive_poses[0].Point.z);
+
+    ros::Duration(2.0).sleep();
+
+    state = ps_->getCurrentStateNonConst();
+
+    if(state.hasAttachedBody("cup"))
+    {
+      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_BROWN << "has attached body");
+    }
 
     bool collision_free = checkCollision(state);
     if (collision_free)
@@ -1361,6 +1322,7 @@ bool RRTConnectPlanner::TEST(int test_flag)
 
       robot_state::robotStateToRobotStateMsg(state, state_msg_.state);
       robot_state_publisher_.publish(state_msg_);
+      ros::Duration(0.5).sleep();
     }
     else
     {
@@ -1387,6 +1349,113 @@ bool RRTConnectPlanner::TEST(int test_flag)
       robot_state_publisher_.publish(state_msg_);
       ros::Duration(0.5).sleep();
     }
+
+    ros::Duration(2.0).sleep();
+
+    Eigen::Affine3d eef_pose = state.getGlobalLinkTransform(eef_name_);
+
+    eef_pose.translation().z() -= 0.04;
+    bool ik = state.setFromIK(rarm_torso_jmg_, eef_pose, 1, 0);
+    if (!ik)
+    {
+      ROS_ERROR("ik fail");
+      return false;
+    }
+
+    state.update();
+
+//    ps_->setCurrentState(state);
+    //ps_->processAttachedCollisionObjectMsg(attached_collision_object_);
+
+    if(state.hasAttachedBody("cup"))
+    {
+      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_BROWN << "has attached body");
+    }
+
+    collision_free = checkCollision(state);
+    if (collision_free)
+    {
+      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_BLUE << "robot is in collision free");
+
+      robot_state::robotStateToRobotStateMsg(state, state_msg_.state);
+      robot_state_publisher_.publish(state_msg_);
+      ros::Duration(0.5).sleep();
+    }
+    else
+    {
+      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_BLUE << "robot is in collision");
+
+      std_msgs::ColorRGBA collide_color;
+      collide_color.r = 1.0;
+      collide_color.g = 0.0;
+      collide_color.b = 0.0;
+      collide_color.a = 1.0;
+
+      robot_state::robotStateToRobotStateMsg(state, state_msg_.state);
+
+      const std::vector<const moveit::core::LinkModel*>& link_models = state.getRobotModel()->getLinkModelsWithCollisionGeometry();
+
+      state_msg_.highlight_links.resize(link_models.size());
+
+      for (std::size_t i = 0; i < wb_link_names_.size(); i++)
+      {
+        state_msg_.highlight_links[i].id = link_models[i]->getName();
+        state_msg_.highlight_links[i].color = collide_color;
+      }
+
+      robot_state_publisher_.publish(state_msg_);
+      ros::Duration(0.5).sleep();
+    }
+
+//    for (int i = 0; i < 100; i++)
+//    {
+//      eef_pose.translation().z() -= 0.1*i;
+//      bool ik = state.setFromIK(rarm_torso_jmg_, eef_pose, 1, 0);
+//      if (!ik)
+//      {
+//        ROS_ERROR("ik fail");
+//        return false;
+//      }
+
+//      state.update();
+
+//      bool collision_free = checkCollision(state);
+//      if (collision_free)
+//      {
+//        ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_BLUE << "robot is in collision free");
+
+//        robot_state::robotStateToRobotStateMsg(state, state_msg_.state);
+//        robot_state_publisher_.publish(state_msg_);
+//        ros::Duration(0.5).sleep();
+//      }
+//      else
+//      {
+//        ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_BLUE << "robot is in collision");
+
+//        std_msgs::ColorRGBA collide_color;
+//        collide_color.r = 1.0;
+//        collide_color.g = 0.0;
+//        collide_color.b = 0.0;
+//        collide_color.a = 1.0;
+
+//        robot_state::robotStateToRobotStateMsg(state, state_msg_.state);
+
+//        const std::vector<const moveit::core::LinkModel*>& link_models = state.getRobotModel()->getLinkModelsWithCollisionGeometry();
+
+//        state_msg_.highlight_links.resize(link_models.size());
+
+//        for (std::size_t i = 0; i < wb_link_names_.size(); i++)
+//        {
+//          state_msg_.highlight_links[i].id = link_models[i]->getName();
+//          state_msg_.highlight_links[i].color = collide_color;
+//        }
+
+//        robot_state_publisher_.publish(state_msg_);
+//        ros::Duration(0.5).sleep();
+//      }
+//    }
+
+    resetTrees();
 
   }
   else if (test_flag == 3)

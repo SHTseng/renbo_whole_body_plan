@@ -81,7 +81,7 @@ public:
 
   bool TEST(int test_flag);
 
-  bool isGrasped = false;
+  bool is_grasped = false;
 
 private:
 
@@ -165,6 +165,8 @@ private:
   robot_model_loader::RobotModelLoaderPtr robot_model_loader_;
 
   const robot_state::JointModelGroup* wb_jmg_;
+
+  const robot_state::JointModelGroup* rarm_torso_jmg_;
 
   const robot_state::JointModelGroup* l_leg_jmg_;
 

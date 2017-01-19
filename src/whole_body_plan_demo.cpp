@@ -65,9 +65,10 @@ int main(int argc, char* argv[])
   }
   else if (ACTIVE_SERVICE == 2)
   {
-    ros::ServiceClient rrt_planner_test_ = nh_.serviceClient<rrt_planner_msgs::RRT_Planner_Test>("rrt_planner_test");
+    ros::ServiceClient rrt_planner_test_ = nh_.serviceClient<rrt_planner_msgs::compute_motion_plan>("rrt_planner_test");
 
-    rrt_planner_msgs::RRT_Planner_Test rrt_planner_test_srv;
+    rrt_planner_msgs::compute_motion_plan rrt_planner_test_srv;
+    rrt_planner_test_srv.request.scenerio = SCENERIO;
 
     if (rrt_planner_test_.call(rrt_planner_test_srv))
     {

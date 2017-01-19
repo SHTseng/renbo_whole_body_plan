@@ -5,12 +5,14 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Grid1/Offset1
+        - /RobotState1
         - /RobotState2/Links1/r_gripper1
         - /RobotState2/Links1/r_gripper1/Position1
         - /RobotState2/Links1/r_gripper1/Orientation1
-        - /PlanningScene1
         - /PlanningScene1/Scene Geometry1
         - /PlanningScene1/Scene Robot1
+        - /Trajectory1
+        - /Trajectory2
       Splitter Ratio: 0.564023972
     Tree Height: 893
   - Class: rviz/Help
@@ -41,7 +43,7 @@ Visualization Manager:
       Plane Cell Count: 10
       Reference Frame: r_sole
       Value: true
-    - Attached Body Color: 150; 50; 150
+    - Attached Body Color: 0; 255; 0
       Class: moveit_rviz_plugin/RobotState
       Collision Enabled: false
       Enabled: true
@@ -221,7 +223,7 @@ Visualization Manager:
           Show Trail: false
           Value: true
       Name: RobotState
-      Robot Alpha: 0.5
+      Robot Alpha: 1
       Robot Description: robot_description
       Robot State Topic: /whole_body_plan/renbo_robot_state
       Show All Links: true
@@ -835,7 +837,195 @@ Visualization Manager:
       Show Robot Visual: true
       Show Trail: false
       State Display Time: 0.05 s
-      Trajectory Topic: /whole_body_plan/renbo_trajectory
+      Trajectory Topic: /whole_body_plan/init_pick_trajectory
+      Value: true
+    - Class: moveit_rviz_plugin/Trajectory
+      Enabled: true
+      Interrupt Display: false
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        gaze:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        head_pitch_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        head_yaw_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_ankle:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_ankle_pitch:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_arm_dummy_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        l_elbow_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_gripper:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_hip_pitch:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_hip_roll:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_hip_yaw:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_knee:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_shoulder_pitch_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_shoulder_roll_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_shoulder_yaw_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        l_sole:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        l_wrist_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_ankle:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_ankle_pitch:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_arm_dummy_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        r_elbow_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_gripper:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_hip_pitch:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_hip_roll:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_hip_yaw:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_knee:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_shoulder_pitch_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_shoulder_roll_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_shoulder_yaw_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        r_sole:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        r_wrist_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        trunk_pitch_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        trunk_roll_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        trunk_yaw_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        waist:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Loop Animation: false
+      Name: Trajectory
+      Robot Alpha: 0.5
+      Robot Description: robot_description
+      Show Robot Collision: false
+      Show Robot Visual: true
+      Show Trail: false
+      State Display Time: 0.05 s
+      Trajectory Topic: /whole_body_plan/pick_place_trajectory
       Value: true
   Enabled: true
   Global Options:
@@ -852,7 +1042,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 3.43799114
+      Distance: 3.46956015
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
@@ -866,10 +1056,10 @@ Visualization Manager:
       Focal Shape Size: 0.0500000007
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.469797015
+      Pitch: 0.304797173
       Target Frame: base_footprint
       Value: XYOrbit (rviz)
-      Yaw: 5.9040575
+      Yaw: 5.6390605
     Saved: ~
 Window Geometry:
   Displays:

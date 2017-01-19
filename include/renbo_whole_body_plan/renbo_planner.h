@@ -43,7 +43,7 @@ public:
 
   bool sc_generator_test(rrt_planner_msgs::SC_Generator_Test::Request &req, rrt_planner_msgs::SC_Generator_Test::Response &res);
 
-  bool rrt_planner_test(rrt_planner_msgs::RRT_Planner_Test::Request &req, rrt_planner_msgs::RRT_Planner_Test::Response &res);
+  bool rrt_planner_test(rrt_planner_msgs::compute_motion_plan::Request &req, rrt_planner_msgs::compute_motion_plan::Response &res);
 
   bool final_pose_planning(rrt_planner_msgs::Final_Pose_Planning::Request &req, rrt_planner_msgs::Final_Pose_Planning::Response &res);
 
@@ -74,11 +74,13 @@ private:
 
   ros::NodeHandle nh_;
 
-  ros::Publisher robot_state_publisher_;
+  ros::Publisher robot_state_pub_;
 
-  ros::Publisher goal_state_publisher_;
+  ros::Publisher goal_state_pub_;
 
-  ros::Publisher trajectory_publisher_;
+  ros::Publisher init_pick_trajectory_pub_;
+
+  ros::Publisher pick_place_trajectory_pub_;
 
   const robot_state::JointModelGroup* wb_jmg_;
 
