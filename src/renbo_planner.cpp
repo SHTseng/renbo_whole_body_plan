@@ -39,8 +39,8 @@ RenboPlanner::RenboPlanner():
 
   wb_joint_names_ = wb_jmg_->getJointModelNames();
 
-  scg_ = std::shared_ptr<renbo_constraint_sampler::StableConfigGenerator>
-      (new renbo_constraint_sampler::StableConfigGenerator(PLANNING_GROUP, SCALE_SP));
+//  scg_ = std::shared_ptr<renbo_constraint_sampler::StableConfigGenerator>
+//      (new renbo_constraint_sampler::StableConfigGenerator(PLANNING_GROUP, SCALE_SP));
 
   fpp_.reset(new renbo_planner::FinalPosePlanner());
 
@@ -60,7 +60,9 @@ RenboPlanner::RenboPlanner():
 
   rviz_visual_tools_->enableBatchPublishing(true);
 
-  rrt_.reset(new renbo_planner::RRTConnectPlanner(PLANNING_GROUP, ds_database_path_, solution_file_path_));
+  mg_rrt_.reset(new renbo_planner::MultiGoalRRTPlanner(PLANNING_GROUP, ds_database_path_, write_file_));
+
+  rrt_.reset(new renbo_planner::RRTConnectPlanner(PLANNING_GROUP, ds_database_path_, write_file_));
 
   rrt_->setVerbose(verbose_);
 
@@ -74,14 +76,19 @@ RenboPlanner::~RenboPlanner()
   psm_->stopPublishingPlanningScene();
 }
 
-bool RenboPlanner::generate_ds_database(rrt_planner_msgs::Generate_DS_Configs::Request &req, rrt_planner_msgs::Generate_DS_Configs::Response &res)
+bool RenboPlanner::generate_ds_database(
+    rrt_planner_msgs::Generate_DS_Configs::Request &req,
+    rrt_planner_msgs::Generate_DS_Configs::Response &res)
 {
+  scg_ = std::shared_ptr<renbo_constraint_sampler::StableConfigGenerator>
+      (new renbo_constraint_sampler::StableConfigGenerator(PLANNING_GROUP, SCALE_SP));
+
   renbo_constraint_sampler::StableConfigGenerator::FootSupport support_mode = renbo_constraint_sampler::StableConfigGenerator::DOUBLE_SUPPORT;
 
   scg_->setVerbose(verbose_);
   scg_->setSupportMode(support_mode);
 
-  if (!scg_->sampleDSConfig(DS_CONFIG_COUNT, ds_database_path_, write_pose_))
+  if (!scg_->sampleDSConfig(DS_CONFIG_COUNT, ds_database_path_, write_file_))
   {
     ROS_ERROR("Could not generate stable config");
     exit(1);
@@ -92,8 +99,33 @@ bool RenboPlanner::generate_ds_database(rrt_planner_msgs::Generate_DS_Configs::R
   return true;
 }
 
-bool RenboPlanner::sc_generator_test(rrt_planner_msgs::SC_Generator_Test::Request &req, rrt_planner_msgs::SC_Generator_Test::Response &res)
+bool RenboPlanner::compute_robot_com(
+    rrt_planner_msgs::Generate_DS_Configs::Request &req,
+    rrt_planner_msgs::Generate_DS_Configs::Response &res)
 {
+  scg_ = std::shared_ptr<renbo_constraint_sampler::StableConfigGenerator>
+      (new renbo_constraint_sampler::StableConfigGenerator(PLANNING_GROUP, SCALE_SP));
+
+  robot_state::RobotState state(ps_->getRobotModel());
+  state.setToDefaultValues();
+  state.update();
+
+  if (!scg_->computeRobotCoM(state))
+  {
+    ROS_ERROR("compute robot CoM fail");
+    return false;
+  }
+
+  return true;
+}
+
+bool RenboPlanner::sc_generator_test(
+    rrt_planner_msgs::SC_Generator_Test::Request &req,
+    rrt_planner_msgs::SC_Generator_Test::Response &res)
+{
+  scg_ = std::shared_ptr<renbo_constraint_sampler::StableConfigGenerator>
+      (new renbo_constraint_sampler::StableConfigGenerator(PLANNING_GROUP, SCALE_SP));
+
   scg_->setVerbose(verbose_);
 
   if (!scg_->test())
@@ -187,22 +219,6 @@ bool RenboPlanner::rrt_planner_test(rrt_planner_msgs::compute_motion_plan::Reque
   moveit_msgs::AttachedCollisionObject attached_object;
   attached_object.object = collision_target_object;
   attached_object.link_name = eef_name_;
-
-//  if (!robot_state_.hasAttachedBody("cup"))
-//  {
-//    {
-//      planning_scene_monitor::LockedPlanningSceneRW scene(psm_);
-//      scene->processAttachedCollisionObjectMsg(attached_object);
-//    }
-
-//    rrt_->setAttachCollsionObject(attached_object);
-//  }
-//  {
-//    planning_scene_monitor::LockedPlanningSceneRW scene(psm_);
-//    scene->processAttachedCollisionObjectMsg(attached_object);
-//    scene->getCurrentStateNonConst().update();
-//  }
-
 
 
   rrt_->is_grasped = false;
@@ -361,10 +377,9 @@ bool RenboPlanner::pick_place_motion_plan(rrt_planner_msgs::compute_motion_plan:
     return false;
   }
 
-
   robot_state_.setVariablePositions(wb_jmg_->getJointModelNames(), pick_config);
   robot_state_.update();
-//  updatePSMRobotState(robot_state_);
+  updatePSMRobotState(robot_state_);
 
   // Publish goal posture to rviz
   moveit_msgs::DisplayRobotState robot_state_msg_;
@@ -373,8 +388,12 @@ bool RenboPlanner::pick_place_motion_plan(rrt_planner_msgs::compute_motion_plan:
 
   Eigen::Affine3d grasp_object_pose;
   grasp_object_pose = robot_state_.getGlobalLinkTransform(eef_name_);
-  grasp_object_pose.rotate(Eigen::AngleAxisd(M_PI/2, Eigen::Vector3d::UnitY()));
-  Eigen::Vector3d transformed_translation = grasp_object_pose.rotation() * Eigen::Vector3d(0.0, -0.16, 0.0);
+//  Eigen::Vector3d transformed_translation = grasp_object_pose.rotation() * Eigen::Vector3d(-0.16, 0.0, 0.0);
+  //grasp_object_pose.rotate(Eigen::AngleAxisd(M_PI/2, Eigen::Vector3d::UnitY()));
+
+  grasp_object_pose.rotate(Eigen::AngleAxisd(-M_PI/2, Eigen::Vector3d::UnitX()));
+  Eigen::Vector3d transformed_translation = grasp_object_pose.rotation() * Eigen::Vector3d(0.0, 0.0, -0.22);
+
   grasp_object_pose.translation() += transformed_translation;
 
   /*
@@ -401,46 +420,125 @@ bool RenboPlanner::pick_place_motion_plan(rrt_planner_msgs::compute_motion_plan:
 
 
   //  Check robot state collision
-//  bool collision_free = checkCollision(psm_->getPlanningScene());
-//  if (!collision_free)
-//  {
-//    ROS_WARN_STREAM("pick pose is in collision");
-//    return false;
-//  }
+  bool collision_free = checkCollision(psm_->getPlanningScene());
+  if (!collision_free)
+  {
+    ROS_WARN_STREAM("pick pose is in collision");
+    return false;
+  }
 
-//  ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_BROWN << "RRT planner: pick pose is valid, start planning");
+  ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_BROWN << "RRT planner: pick pose is valid, start planning");
 
   //RRT-Connect path planning, initial state to pick place.
-//  std::vector<double> initial_configuration(wb_jmg_->getVariableCount());
+  std::vector<double> initial_configuration(wb_jmg_->getVariableCount());
 
-//  rrt_->updateEnvironment(psm_->getPlanningScene());
-//  rrt_->setStartGoalConfigs(initial_configuration, pick_config);
-
-//  moveit_msgs::DisplayTrajectory display_trajectory_ = rrt_->solveQuery(20000, 0.1);
-//  init_pick_trajectory_pub_.publish(display_trajectory_);
-
-//  ros::Duration(2.0).sleep();
-
-  moveit_msgs::AttachedCollisionObject attached_object;
-  attached_object.object = collision_target_object;
-  attached_object.link_name = eef_name_;
-
-  // RRT-Connect path planning, pick to place.
-  rrt_->is_grasped = true;
   rrt_->updateEnvironment(psm_->getPlanningScene());
-  rrt_->setAttachCollsionObject(attached_object);
-  rrt_->setStartGoalConfigs(pick_config, place_config);
+  rrt_->setStartGoalConfigs(initial_configuration, pick_config);
 
-  moveit_msgs::DisplayTrajectory display_trajectory_second_ = rrt_->solveQuery(20000, 0.1);
-  pick_place_trajectory_pub_.publish(display_trajectory_second_);
+  moveit_msgs::DisplayTrajectory display_trajectory_ = rrt_->solveQuery(20000, 0.1);
+  init_pick_trajectory_pub_.publish(display_trajectory_);
 
   ros::Duration(2.0).sleep();
+
+//  moveit_msgs::AttachedCollisionObject attached_object;
+//  attached_object.object = collision_target_object;
+//  attached_object.link_name = eef_name_;
+
+//  // RRT-Connect path planning, pick to place.
+//  rrt_->is_grasped = true;
+//  rrt_->updateEnvironment(psm_->getPlanningScene());
+//  rrt_->setAttachCollsionObject(attached_object);
+//  rrt_->setStartGoalConfigs(pick_config, place_config);
+
+//  moveit_msgs::DisplayTrajectory display_trajectory_second_ = rrt_->solveQuery(20000, 0.1);
+//  pick_place_trajectory_pub_.publish(display_trajectory_second_);
+
+//  ros::Duration(2.0).sleep();
 
   rrt_->is_grasped = false;
 
   ps_->removeAllCollisionObjects();
 
   res.success = true;
+
+  return true;
+}
+
+bool RenboPlanner::multi_goal_rrt_planner(rrt_planner_msgs::compute_motion_plan::Request &req,
+                                          rrt_planner_msgs::compute_motion_plan::Response &res)
+{
+  scenario_ = req.scenerio;
+  rviz_visual_tools_->deleteAllMarkers();
+
+  robot_state::RobotState robot_state_ = psm_->getPlanningScene()->getCurrentStateNonConst();
+  robot_state_.setToDefaultValues();
+  robot_state_.update();
+
+  updatePSMRobotState(robot_state_);
+  loadCollisionEnvironment(scenario_);
+
+  eef_original_config_ = robot_state_.getGlobalLinkTransform(eef_name_);
+  waist_original_config_ = robot_state_.getGlobalLinkTransform(waist_name_);
+
+  Eigen::Affine3d eef_pick_pose, eef_place_pose, waist_pick_pose, waist_place_pose;
+  if (!updatePickPlacePose(scenario_, eef_pick_pose, eef_place_pose, waist_pick_pose, waist_place_pose))
+  {
+    ROS_INFO_STREAM("Can't update pick and place poses");
+    return false;
+  }
+
+  fpp_->updateScene(psm_->getPlanningScene());
+
+  ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "Multi-Goal RRT planner: Start pick planning");
+
+  std::vector<double> pick_config(wb_jmg_->getVariableCount());
+  bool final_pose_flag = fpp_->solveFinalPose(robot_state_, eef_pick_pose, waist_pick_pose, pick_config);
+  if (!final_pose_flag)
+  {
+    ROS_INFO_STREAM("Solve pick pose fail");
+    return false;
+  }
+
+  ROS_INFO_STREAM("Solved pick pose");
+
+  //Setup place pose
+  std::vector<double> place_config(wb_jmg_->getVariableCount());
+  final_pose_flag = fpp_->solveFinalPose(robot_state_, eef_place_pose, waist_place_pose, place_config);
+  if (!final_pose_flag)
+  {
+    ROS_INFO_STREAM("Solve place pose fail");
+    return false;
+  }
+
+  robot_state_.setVariablePositions(wb_jmg_->getJointModelNames(), pick_config);
+  robot_state_.update();
+  updatePSMRobotState(robot_state_);
+
+  // Publish goal posture to rviz
+  moveit_msgs::DisplayRobotState robot_state_msg_;
+  robot_state::robotStateToRobotStateMsg(robot_state_, robot_state_msg_.state);
+  goal_state_pub_.publish(robot_state_msg_);
+
+  Eigen::Affine3d grasp_object_pose;
+  grasp_object_pose = robot_state_.getGlobalLinkTransform(eef_name_);
+  Eigen::Vector3d transformed_translation = grasp_object_pose.rotation() * Eigen::Vector3d(-0.16, 0.0, 0.0);
+  grasp_object_pose.rotate(Eigen::AngleAxisd(M_PI/2, Eigen::Vector3d::UnitY()));
+
+//  grasp_object_pose.rotate(Eigen::AngleAxisd(-M_PI/2, Eigen::Vector3d::UnitX()));
+//  Eigen::Vector3d transformed_translation = grasp_object_pose.rotation() * Eigen::Vector3d(0.0, 0.0, -0.22);
+
+  grasp_object_pose.translation() += transformed_translation;
+
+  std::vector<double> initial_config(wb_jmg_->getVariableCount());
+  std::vector< std::vector<double> > goal_configs;
+  goal_configs.resize(5);
+  for (int i = 0; i < 5; i++)
+  {
+    goal_configs[i] = initial_config;
+  }
+
+  mg_rrt_ ->setStartGoalConfigs(initial_config, goal_configs);
+  mg_rrt_->solve(20000, 0.1);
 
   return true;
 }
@@ -571,6 +669,45 @@ void RenboPlanner::loadCollisionEnvironment(int type)
 
     break;
   }
+  case 4:
+  {
+    table_pose.position.x = 0.6;
+    table_pose.position.y = 0.125;
+    table_pose.position.z = 0.0;
+    table_pose.orientation.w = 1.0;
+    table_pose.orientation.x = 0.0;
+    table_pose.orientation.y = 0.0;
+    table_pose.orientation.z = 0.0;
+
+    moveit_msgs::CollisionObject collision_mesh_table = loadMeshFromSource("ikea_table.stl", table_pose);
+
+    addPSMCollisionObject(collision_mesh_table, getColor(222.0, 184.0, 135.0, 1.0));
+
+    shape_msgs::SolidPrimitive box;
+    box.type = box.BOX;
+    box.dimensions.resize(3);
+    box.dimensions[0] = 0.3;
+    box.dimensions[1] = 0.02;
+    box.dimensions[2] = 0.25;
+
+    pose.position.x = 0.55;
+    pose.position.y = -0.28;
+    pose.position.z = 0.85;
+    pose.orientation.w = 1.0;
+    pose.orientation.x = 0.0;
+    pose.orientation.y = 0.0;
+    pose.orientation.z = 0.0;
+
+    moveit_msgs::CollisionObject collision_box;
+    collision_box.id = "box";
+    collision_box.header.frame_id = "r_sole";
+    collision_box.primitives.push_back(box);
+    collision_box.primitive_poses.push_back(pose);
+    collision_box.operation = collision_box.ADD;
+
+    addPSMCollisionObject(collision_box, getColor(255.0, 255.0, 255.0, 1.0));
+    break;
+  }
 
   } // end switch
 
@@ -675,6 +812,10 @@ bool RenboPlanner::updatePickPlacePose(const int& scenerio, Eigen::Affine3d& pic
   case 3:
     file_name = package_path.append("/database/scene_3.dat");
     break;
+
+  case 4:
+    file_name = package_path.append("/database/scene_4.dat");
+    break;
   }
 
   std::ifstream read_file(file_name, std::ios::in);
@@ -776,7 +917,7 @@ void RenboPlanner::loadYamlParameter()
   // general parameter
   nh_.param("scenario", scenario_, 0);
   nh_.param("test_flag", test_flag_, 0);
-  nh_.param("write_path", write_pose_, false);
+  nh_.param("write_file", write_file_, false);
   nh_.param("verbose", verbose_, false);
 }
 

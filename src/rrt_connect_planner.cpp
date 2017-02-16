@@ -10,16 +10,17 @@
 namespace renbo_planner
 {
 
-RRTConnectPlanner::RRTConnectPlanner(std::string group_name, std::string database_pth, std::string solution_path):
+RRTConnectPlanner::RRTConnectPlanner(std::string group_name, std::string database_pth, bool write_file):
   nh_("~"),
   group_name_(group_name),
   database_path_(database_pth),
   visualize_path_(false),
   base_frame_("r_sole"),
   eef_name_("r_gripper"),
-  verbose_(false),
   is_grasped(false),
-  step_size_(0.05)
+  step_size_(0.05),
+  write_file_(false),
+  verbose_(false)
 {
   robot_model_loader_.reset(new robot_model_loader::RobotModelLoader("robot_description"));
 
@@ -37,9 +38,9 @@ RRTConnectPlanner::RRTConnectPlanner(std::string group_name, std::string databas
 
   wb_num_joint_ = wb_joint_names_.size();
 
-  tree_start_.name = "start_tree";
+//  tree_start_.name = "start_tree";
 
-  tree_goal_.name= "goal_tree";
+//  tree_goal_.name= "goal_tree";
 
   robot_state_publisher_ = nh_.advertise<moveit_msgs::DisplayRobotState>("renbo_robot_state", 1);
 
@@ -63,7 +64,9 @@ RRTConnectPlanner::~RRTConnectPlanner()
 
 moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, double max_step_size)
 {
-//  rviz_visual_tools_->deleteAllMarkers();
+  rviz_visual_tools_->deleteAllMarkers();
+  rviz_visual_tools_->trigger();
+
   ROS_INFO_STREAM("start query path between initial and goal state");
   step_size_ = max_step_size;
 
@@ -131,14 +134,14 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
               state_.setVariablePositions(wb_joint_names_, solution_path_configs_[i]);
               Eigen::Affine3d eef_pose = state_.getGlobalLinkTransform(eef_name_);
 
-              rviz_visual_tools_->publishSphere(eef_pose, rviz_visual_tools::ORANGE, rviz_visual_tools::MEDIUM);
-              rviz_visual_tools_->trigger();
+//              rviz_visual_tools_->publishSphere(eef_pose, rviz_visual_tools::ORANGE, rviz_visual_tools::MEDIUM);
+//              rviz_visual_tools_->trigger();
 
               path_pts.push_back(eef_pose);
             }
 
-            rviz_visual_tools_->publishPath(path_pts, rviz_visual_tools::YELLOW, rviz_visual_tools::MEDIUM);
-            rviz_visual_tools_->trigger();
+//            rviz_visual_tools_->publishPath(path_pts, rviz_visual_tools::YELLOW, rviz_visual_tools::MEDIUM);
+//            rviz_visual_tools_->trigger();
           }
 
           end_time = ros::Time::now();
@@ -189,14 +192,14 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
               state_.setVariablePositions(wb_joint_names_, solution_path_configs_[i]);
               Eigen::Affine3d eef_pose = state_.getGlobalLinkTransform(eef_name_);
 
-              rviz_visual_tools_->publishSphere(eef_pose, rviz_visual_tools::ORANGE, rviz_visual_tools::MEDIUM);
-              rviz_visual_tools_->trigger();
+//              rviz_visual_tools_->publishSphere(eef_pose, rviz_visual_tools::ORANGE, rviz_visual_tools::MEDIUM);
+//              rviz_visual_tools_->trigger();
 
               path_pts.push_back(eef_pose);
             }
 
-            rviz_visual_tools_->publishPath(path_pts, rviz_visual_tools::YELLOW, rviz_visual_tools::MEDIUM);
-            rviz_visual_tools_->trigger();
+//            rviz_visual_tools_->publishPath(path_pts, rviz_visual_tools::YELLOW, rviz_visual_tools::MEDIUM);
+//            rviz_visual_tools_->trigger();
           }
 
           end_time = ros::Time::now();
@@ -249,13 +252,13 @@ bool RRTConnectPlanner::setStartGoalConfigs(std::vector<double> start_config , s
   goal.index = 0;
   goal.predecessor_index = 0;
 
-  if (!checkCollision(ps_, start.config))
+  if (!checkCollision(start.config))
   {
     ROS_ERROR("start config is invalid");
     return false;
   }
 
-  if (!checkCollision(ps_, goal.config))
+  if (!checkCollision(goal.config))
   {
     ROS_ERROR("goal config is invalid");
     return false;
@@ -339,7 +342,7 @@ status RRTConnectPlanner::extendTree(tree &input_tree, node q_rand, node &q_near
           robot_state::robotStateToRobotStateMsg(state, robot_state_msg_.state);
           robot_state_publisher_.publish(robot_state_msg_);
 
-          ros::Duration(0.05).sleep();
+          ros::Duration(1.0).sleep();
         }
       }
       else
@@ -367,7 +370,7 @@ status RRTConnectPlanner::extendTree(tree &input_tree, node q_rand, node &q_near
           }
 
           robot_state_publisher_.publish(robot_state_msg_);
-          ros::Duration(0.05).sleep();
+          ros::Duration(1.0).sleep();
 
           ROS_INFO_STREAM("extend tree: state in collision return trapped");
         }
@@ -570,7 +573,9 @@ void RRTConnectPlanner::addConfigtoTree(tree &input_tree, node q_near, node q_ne
   input_tree.num_nodes = input_tree.nodes.size();
 }
 
-void RRTConnectPlanner::writePath(tree T_start, tree T_goal, node q_near, int connector, moveit_msgs::DisplayTrajectory &trajectory, std::string solution_file_path)
+void RRTConnectPlanner::writePath(tree T_start, tree T_goal, node q_near,
+                                  int connector, moveit_msgs::DisplayTrajectory &disp_trajectory_msgs,
+                                  std::string solution_file_path)
 {
   ROS_INFO_STREAM("Write path to trajectory file");
 
@@ -625,7 +630,7 @@ void RRTConnectPlanner::writePath(tree T_start, tree T_goal, node q_near, int co
   ROS_INFO_STREAM("Doing path short cutting...");
 
   /******************* PATH SHORTCUTTER *******************/
-  Trajectory shortcutted_path;
+  trajectory shortcutted_path;
   int num_intermediate_waypoints_approach = 100;
 
   bool shorcut_flag = false;
@@ -646,7 +651,7 @@ void RRTConnectPlanner::writePath(tree T_start, tree T_goal, node q_near, int co
       path_pts_.push_back(robot_state_.getGlobalLinkTransform(eef_name_));
     }
 
-    rviz_visual_tools_->publishPath(path_pts_, rviz_visual_tools::GREEN, rviz_visual_tools::MEDIUM);
+    rviz_visual_tools_->publishPath(path_pts_, rviz_visual_tools::GREEN, rviz_visual_tools::LARGE);
     rviz_visual_tools_->trigger();
 
   }
@@ -654,45 +659,48 @@ void RRTConnectPlanner::writePath(tree T_start, tree T_goal, node q_near, int co
   if (shorcut_flag)
   {
     // generate trajectory from solution path
-    generateTrajectory(shortcutted_path, shortcutted_path.size(), trajectory);
+    generateTrajectory(shortcutted_path, shortcutted_path.size(), disp_trajectory_msgs);
 
-    // record current time and add to file
-    boost::gregorian::date dayte(boost::gregorian::day_clock::local_day());
-    boost::posix_time::ptime midnight(dayte);
-    boost::posix_time::ptime now(boost::posix_time::microsec_clock::local_time());
-    boost::posix_time::time_duration td = now - midnight;
-
-    std::stringstream sstream;
-
-    sstream << dayte.year() << "-" << dayte.month().as_number()
-         << "-" << dayte.day() << "-";
-
-    sstream << td.hours() << "-" << td.minutes() << "-" << td.seconds();
-
-    solution_file_path = "/home/shtseng/catkin_ws/src/renbo_whole_body_plan/trajectory/whole_body_trajectory-"
-        + sstream.str() + ".txt";
-
-    std::ofstream solution_path;
-    solution_path.open(solution_file_path.c_str());
-
-    if (!solution_path)
+    if (write_file_)
     {
-      ROS_ERROR("Could not open solution file");
-      exit(1);
-    }
+      // record current time and add to file
+      boost::gregorian::date dayte(boost::gregorian::day_clock::local_day());
+      boost::posix_time::ptime midnight(dayte);
+      boost::posix_time::ptime now(boost::posix_time::microsec_clock::local_time());
+      boost::posix_time::time_duration td = now - midnight;
 
-    for (std::size_t i = 0; i < shortcutted_path.size(); i++)
-    {
-      for (std::size_t j = 0; j < wb_num_joint_; j++)
+      std::stringstream sstream;
+
+      sstream << dayte.year() << "-" << dayte.month().as_number()
+           << "-" << dayte.day() << "-";
+
+      sstream << td.hours() << "-" << td.minutes() << "-" << td.seconds();
+
+      solution_file_path = "/home/shtseng/catkin_ws/src/renbo_whole_body_plan/trajectory/whole_body_trajectory-"
+          + sstream.str() + ".txt";
+
+      std::ofstream solution_path;
+      solution_path.open(solution_file_path.c_str());
+
+      if (!solution_path)
       {
-        solution_path << shortcutted_path[i][j] << " ";
+        ROS_ERROR("Could not open solution file");
+        exit(1);
       }
 
-      solution_path << std::endl;
-    }
-    solution_path.close();
+      for (std::size_t i = 0; i < shortcutted_path.size(); i++)
+      {
+        for (std::size_t j = 0; j < wb_num_joint_; j++)
+        {
+          solution_path << shortcutted_path[i][j] << " ";
+        }
 
-    ROS_INFO_STREAM("Wrote data to file complete");
+        solution_path << std::endl;
+      }
+      solution_path.close();
+
+      ROS_INFO_STREAM("Wrote data to file complete");
+    }
   }
 
 }
@@ -788,9 +796,9 @@ void RRTConnectPlanner::generateTrajectory(std::vector<std::vector<double> > pat
 
 }
 
-bool RRTConnectPlanner::pathShortCutter(Trajectory raw_path, Trajectory &shortcutted_path, int num_intermediate_waypoints)
+bool RRTConnectPlanner::pathShortCutter(trajectory raw_path, trajectory &shortcutted_path, int num_intermediate_waypoints)
 {
-  Trajectory path_temp;
+  trajectory path_temp;
   std::vector<double> start_config, goal_config, current_goal_config;
   int current_start_index = 0;
 
@@ -872,10 +880,9 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::interpolateWaypoints(std::vect
 {
   moveit_msgs::DisplayTrajectory interpolated_trajectory;
   moveit_msgs::RobotTrajectory robot_trajectory_msgs;
-  moveit_msgs::RobotState initial_state_msgs;
   trajectory_msgs::JointTrajectory joint_trajectory_msgs;
 
-  Trajectory interpolated_waypoints;
+  trajectory interpolated_waypoints;
 
   std::vector<double> step_width(wb_num_joint_);
   for (int i = 0; i < wb_num_joint_; i++)
@@ -918,14 +925,15 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::interpolateWaypoints(std::vect
     increment += 1.0;
   }
 
-  initial_state_msgs.joint_state.name.resize(wb_num_joint_);
-  initial_state_msgs.joint_state.position.resize(wb_num_joint_);
+//  initial_state_msgs.joint_state.name.resize(wb_num_joint_);
+//  initial_state_msgs.joint_state.position.resize(wb_num_joint_);
 
-  for (int i = 0; i < wb_num_joint_; i++)
-  {
-    initial_state_msgs.joint_state.name[i] = wb_joint_names_[i];
-    initial_state_msgs.joint_state.position[i] = waypoint_start[i];
-  }
+//  for (int i = 0; i < wb_num_joint_; i++)
+//  {
+//    initial_state_msgs.joint_state.name[i] = wb_joint_names_[i];
+//    initial_state_msgs.joint_state.position[i] = waypoint_start[i];
+//  }
+  moveit_msgs::RobotState initial_state_msgs;
 
   if (is_grasped)
   {
@@ -934,6 +942,17 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::interpolateWaypoints(std::vect
     state.update();
 
     robot_state::robotStateToRobotStateMsg(state, initial_state_msgs, true);
+  }
+  else
+  {
+    initial_state_msgs.joint_state.name.resize(wb_num_joint_);
+    initial_state_msgs.joint_state.position.resize(wb_num_joint_);
+
+    for (int i = 0; i < wb_num_joint_; i++)
+    {
+      initial_state_msgs.joint_state.name[i] = wb_joint_names_[i];
+      initial_state_msgs.joint_state.position[i] = waypoint_start[i];
+    }
   }
 
   //initial_state_msgs.multi_dof_joint_state.joint_names.push_back("virtual_joint");
@@ -948,8 +967,8 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::interpolateWaypoints(std::vect
   return interpolated_trajectory;
 }
 
-void RRTConnectPlanner::linearInterpolation(Trajectory short_path,
-                                            Trajectory &interpolated_path,
+void RRTConnectPlanner::linearInterpolation(trajectory short_path,
+                                            trajectory &interpolated_path,
                                             int num_intermediate_waypoints)
 {
   interpolated_path.push_back(short_path[0]);
@@ -1061,11 +1080,11 @@ void RRTConnectPlanner::updateEnvironment(const planning_scene::PlanningScenePtr
 //  }
 }
 
-bool RRTConnectPlanner::checkCollision(planning_scene::PlanningScenePtr ps_, const std::vector<double> config)
+bool RRTConnectPlanner::checkCollision(const std::vector<double> config)
 {
   bool validity = false;
 
-  robot_state::RobotState robot_state(ps_->getRobotModel());
+  robot_state::RobotState robot_state = ps_->getCurrentStateNonConst();
 
   for (int i = 0; i < wb_joint_names_.size(); i++)
   {
@@ -1377,7 +1396,7 @@ bool RRTConnectPlanner::TEST(int test_flag)
     {
       ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_BLUE << "robot is in collision free");
 
-      robot_state::robotStateToRobotStateMsg(state, state_msg_.state);
+      robot_state::robotStateToRobotStateMsg(state, state_msg_.state, true);
       robot_state_publisher_.publish(state_msg_);
       ros::Duration(0.5).sleep();
     }
@@ -1391,7 +1410,7 @@ bool RRTConnectPlanner::TEST(int test_flag)
       collide_color.b = 0.0;
       collide_color.a = 1.0;
 
-      robot_state::robotStateToRobotStateMsg(state, state_msg_.state);
+      robot_state::robotStateToRobotStateMsg(state, state_msg_.state, true);
 
       const std::vector<const moveit::core::LinkModel*>& link_models = state.getRobotModel()->getLinkModelsWithCollisionGeometry();
 
@@ -1406,54 +1425,6 @@ bool RRTConnectPlanner::TEST(int test_flag)
       robot_state_publisher_.publish(state_msg_);
       ros::Duration(0.5).sleep();
     }
-
-//    for (int i = 0; i < 100; i++)
-//    {
-//      eef_pose.translation().z() -= 0.1*i;
-//      bool ik = state.setFromIK(rarm_torso_jmg_, eef_pose, 1, 0);
-//      if (!ik)
-//      {
-//        ROS_ERROR("ik fail");
-//        return false;
-//      }
-
-//      state.update();
-
-//      bool collision_free = checkCollision(state);
-//      if (collision_free)
-//      {
-//        ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_BLUE << "robot is in collision free");
-
-//        robot_state::robotStateToRobotStateMsg(state, state_msg_.state);
-//        robot_state_publisher_.publish(state_msg_);
-//        ros::Duration(0.5).sleep();
-//      }
-//      else
-//      {
-//        ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_BLUE << "robot is in collision");
-
-//        std_msgs::ColorRGBA collide_color;
-//        collide_color.r = 1.0;
-//        collide_color.g = 0.0;
-//        collide_color.b = 0.0;
-//        collide_color.a = 1.0;
-
-//        robot_state::robotStateToRobotStateMsg(state, state_msg_.state);
-
-//        const std::vector<const moveit::core::LinkModel*>& link_models = state.getRobotModel()->getLinkModelsWithCollisionGeometry();
-
-//        state_msg_.highlight_links.resize(link_models.size());
-
-//        for (std::size_t i = 0; i < wb_link_names_.size(); i++)
-//        {
-//          state_msg_.highlight_links[i].id = link_models[i]->getName();
-//          state_msg_.highlight_links[i].color = collide_color;
-//        }
-
-//        robot_state_publisher_.publish(state_msg_);
-//        ros::Duration(0.5).sleep();
-//      }
-//    }
 
     resetTrees();
 
@@ -1530,12 +1501,6 @@ void RRTConnectPlanner::setAttachCollsionObject(const moveit_msgs::AttachedColli
   attached_collision_object_ = attach_object;
 }
 
-void RRTConnectPlanner::setDatabasePath(const std::string &path)
-{
-  database_path_.clear();
-  database_path_ = path;
-}
-
 void RRTConnectPlanner::setVisualizationSwtich(bool on_off)
 {
   visualize_path_ = on_off;
@@ -1551,6 +1516,225 @@ void RRTConnectPlanner::PAUSE()
   ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_BROWN << "Press any key to continue");
   std::string dummy;
   std::getline(std::cin, dummy);
+}
+
+MultiGoalRRTPlanner::MultiGoalRRTPlanner(std::string group_name, std::string database_pth, bool write_file)
+  : RRTConnectPlanner(group_name, database_pth, write_file)
+{
+
+}
+
+moveit_msgs::DisplayTrajectory MultiGoalRRTPlanner::solve(int max_iter, double max_step_size)
+{
+  rviz_visual_tools_->deleteAllMarkers();
+  rviz_visual_tools_->trigger();
+
+  ROS_INFO_STREAM("start query path between initial and goal state");
+  step_size_ = max_step_size;
+
+  robot_state::RobotState robot_state_ = ps_->getCurrentStateNonConst();
+  robot_state_.setToDefaultValues();
+  robot_state_.update();
+
+  robot_state::RobotState state_ = ps_->getCurrentStateNonConst();
+  state_.setToDefaultValues();
+  state_.update();
+
+  moveit_msgs::DisplayTrajectory sln_traj;
+  node q_rand, q_near;
+  status rrt_status, path_found;
+  bool swap = false;
+  int num_node_generated = 0, swap_cnt = 0;
+
+  ros::Time start_time, end_time;
+  ros::Duration dura;
+
+  ROS_INFO_STREAM("initial tree size:" << tree_start_.nodes.size());
+  ROS_INFO_STREAM("goal tree size:" << goal_trees_.size());
+
+//  if (!loadDSDatabase(database_path_))
+//  {
+//    ROS_ERROR("Load database fail fail");
+//    return sln_traj;
+//  }
+//  ros::Duration(1.0).sleep();
+
+//  start_time = ros::Time::now();
+
+//  ROS_INFO("Multi-Goal RRT planner: start iteration");
+//  for (int i = 0; i < max_iter; i++)
+//  {
+//    getRandomStableConfig(q_rand);
+
+//    if (swap == false)
+//    {
+//      rrt_status = extendTree(tree_start_, q_rand, q_near, robot_state_);
+
+//      if (rrt_status != TRAPPED)
+//      {
+//        path_found = connectTree(tree_goal_, tree_start_.nodes.back(), q_near, robot_state_);
+
+//        if (path_found == REACHED)
+//        {
+//          if (verbose_)
+//          {
+//            ROS_INFO("Path found, tree_goal is connect to tree_start");
+//          }
+
+//          writePath(tree_start_, tree_goal_, q_near, 1, sln_traj, solution_file_path_);
+
+//          if (visualize_path_)
+//          {
+//            EigenSTL::vector_Affine3d path_pts;
+
+//            for (int i = 0; i < solution_path_configs_.size(); i++)
+//            {
+//              state_.setVariablePositions(wb_joint_names_, solution_path_configs_[i]);
+//              Eigen::Affine3d eef_pose = state_.getGlobalLinkTransform(eef_name_);
+
+////              rviz_visual_tools_->publishSphere(eef_pose, rviz_visual_tools::ORANGE, rviz_visual_tools::MEDIUM);
+////              rviz_visual_tools_->trigger();
+
+//              path_pts.push_back(eef_pose);
+//            }
+
+////            rviz_visual_tools_->publishPath(path_pts, rviz_visual_tools::YELLOW, rviz_visual_tools::MEDIUM);
+////            rviz_visual_tools_->trigger();
+//          }
+
+//          end_time = ros::Time::now();
+//          dura =  end_time - start_time;
+//          num_node_generated =  tree_start_.num_nodes + tree_goal_.num_nodes;
+
+//          ROS_INFO_STREAM("\nSummary:\n Totoal elapsed time: " << dura
+//                          << " seconds \n Generated " << num_node_generated << " nodes \n"
+//                          << " Swapped " << swap_cnt << " times \n"
+//                          << " Iterate " << i << " times");
+
+//          resetTrees();
+//          return sln_traj;
+//        }
+//        else
+//        {
+//          swap = true;
+//          swap_cnt++;
+//        }
+
+//      }
+//      else
+//      {
+//        swap = true;
+//        swap_cnt++;
+//      }
+//    }
+//    else
+//    {
+//      rrt_status = extendTree(tree_goal_, q_rand, q_near, robot_state_);
+
+//      if (rrt_status != TRAPPED)
+//      {
+//        path_found = connectTree(tree_start_, tree_goal_.nodes.back(), q_near, robot_state_);
+
+//        if (path_found == REACHED)
+//        {
+//          ROS_INFO("Path found, tree_start is connect to tree_goal");
+
+//          writePath(tree_start_, tree_goal_, q_near, 2, sln_traj, solution_file_path_);
+
+//          if (visualize_path_)
+//          {
+//            EigenSTL::vector_Affine3d path_pts;
+
+//            for (int i = 0; i < solution_path_configs_.size(); i++)
+//            {
+//              state_.setVariablePositions(wb_joint_names_, solution_path_configs_[i]);
+//              Eigen::Affine3d eef_pose = state_.getGlobalLinkTransform(eef_name_);
+
+////              rviz_visual_tools_->publishSphere(eef_pose, rviz_visual_tools::ORANGE, rviz_visual_tools::MEDIUM);
+////              rviz_visual_tools_->trigger();
+
+//              path_pts.push_back(eef_pose);
+//            }
+
+////            rviz_visual_tools_->publishPath(path_pts, rviz_visual_tools::YELLOW, rviz_visual_tools::MEDIUM);
+////            rviz_visual_tools_->trigger();
+//          }
+
+//          end_time = ros::Time::now();
+//          dura =  end_time - start_time;
+//          num_node_generated =  tree_start_.num_nodes + tree_goal_.num_nodes;
+
+//          ROS_INFO_STREAM("\nSummary:\n Totoal elapsed time: " << dura
+//                          << " seconds \n Generated " << num_node_generated << " nodes \n"
+//                          << " Swapped " << swap_cnt << " times \n"
+//                          << " Iterate " << i << " times");
+
+
+//          resetTrees();
+//          return sln_traj;
+//        }
+//        else
+//        {
+//          swap = false;
+//          swap_cnt++;
+//        }
+
+//      }
+//      else
+//      {
+//        swap = false;
+//        swap_cnt++;
+//      }
+
+//    }
+
+//  }
+
+//  resetTrees();
+
+//  ROS_ERROR("No solution path found");
+
+  return sln_traj;
+
+}
+
+bool MultiGoalRRTPlanner::setStartGoalConfigs(std::vector<double> start_config , std::vector< std::vector<double> > goal_configs)
+{
+  node start, goal;
+
+  start.config = start_config;
+  start.index = 0;
+  start.predecessor_index = 0;
+
+  if (!checkCollision(start.config))
+  {
+    ROS_ERROR("start config is invalid");
+    return false;
+  }
+
+  tree_start_.nodes.push_back(start);
+  tree_start_.num_nodes = 1;
+
+  int num_goal = goal_configs.size();
+  goal_trees_.resize(num_goal);
+  for (int i = 0; i < num_goal; i++)
+  {
+    goal.config = goal_configs[i];
+    goal.index = 0;
+    goal.predecessor_index = 0;
+
+    if (!checkCollision(goal.config))
+    {
+      ROS_ERROR_STREAM("goal config " << i << " is invalid");
+      continue;
+    }
+
+    goal_trees_[i].id = i;
+    goal_trees_[i].nodes.push_back(goal);
+    goal_trees_[i].num_nodes = 1;
+  }
+
+  return true;
 }
 
 }

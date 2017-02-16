@@ -15,13 +15,17 @@ int main(int argc, char* argv[])
 
   ros::ServiceServer generate_ds_database_ = nh.advertiseService("generate_ds_database", &RenboPlanner::generate_ds_database, &renbo_planner_);
 
-  ros::ServiceServer sc_generator_test = nh.advertiseService("sc_generator_test", &RenboPlanner::sc_generator_test, &renbo_planner_);
+//  ros::ServiceServer sc_generator_test = nh.advertiseService("sc_generator_test", &RenboPlanner::sc_generator_test, &renbo_planner_);
 
-  ros::ServiceServer rrt_planner_test = nh.advertiseService("rrt_planner_test", &RenboPlanner::rrt_planner_test, &renbo_planner_);
+  ros::ServiceServer compute_robot_com = nh.advertiseService("compute_robot_com", &RenboPlanner::compute_robot_com, &renbo_planner_);
+
+//  ros::ServiceServer rrt_planner_test = nh.advertiseService("rrt_planner_test", &RenboPlanner::rrt_planner_test, &renbo_planner_);
 
   ros::ServiceServer final_pose_planning_ = nh.advertiseService("final_pose_planning", &RenboPlanner::final_pose_planning, &renbo_planner_);
 
   ros::ServiceServer pick_place_motion_plan = nh.advertiseService("pick_place_motion_plan", &RenboPlanner::pick_place_motion_plan, &renbo_planner_);
+
+  ros::ServiceServer multi_goal_rrt_planner = nh.advertiseService("multi_goal_rrt_planner", &RenboPlanner::multi_goal_rrt_planner, &renbo_planner_);
 
   ros::spin();
 

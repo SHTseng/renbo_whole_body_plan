@@ -48,14 +48,12 @@ int main(int argc, char* argv[])
   }
   else if (ACTIVE_SERVICE == 1)
   {
-    ros::ServiceClient sc_test = nh_.serviceClient<rrt_planner_msgs::SC_Generator_Test>("sc_generator_test");
-    rrt_planner_msgs::SC_Generator_Test test_srv;
+    ros::ServiceClient mg_rrt_planner = nh_.serviceClient<rrt_planner_msgs::compute_motion_plan>("multi_goal_rrt_planner");
+    rrt_planner_msgs::compute_motion_plan mg_rrt_planner_srv;
 
-    test_srv.request.state = 1;
-
-    if(sc_test.call(test_srv))
+    mg_rrt_planner_srv.request.scenerio = SCENERIO;
+    if(mg_rrt_planner.call(mg_rrt_planner_srv))
     {
-      ROS_INFO_STREAM("return state: " << test_srv.response.result);
     }
     else
     {
@@ -63,6 +61,23 @@ int main(int argc, char* argv[])
       exit(1);
     }
   }
+//  else if (ACTIVE_SERVICE == 1)
+//  {
+//    ros::ServiceClient sc_test = nh_.serviceClient<rrt_planner_msgs::SC_Generator_Test>("sc_generator_test");
+//    rrt_planner_msgs::SC_Generator_Test test_srv;
+
+//    test_srv.request.state = 1;
+
+//    if(sc_test.call(test_srv))
+//    {
+//      ROS_INFO_STREAM("return state: " << test_srv.response.result);
+//    }
+//    else
+//    {
+//      ROS_ERROR("Run test fail");
+//      exit(1);
+//    }
+//  }
   else if (ACTIVE_SERVICE == 2)
   {
     ros::ServiceClient rrt_planner_test_ = nh_.serviceClient<rrt_planner_msgs::compute_motion_plan>("rrt_planner_test");

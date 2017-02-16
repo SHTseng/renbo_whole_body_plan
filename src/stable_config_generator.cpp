@@ -188,6 +188,57 @@ bool StableConfigGenerator::sampleDSConfig(int config_count, std::string file_de
   return true;
 }
 
+bool StableConfigGenerator::computeRobotCoM(const robot_state::RobotState& state)
+{
+//  robot_state::RobotState robot_state_(ps_->getRobotModel());
+
+//  robot_state_ = ps_->getCurrentStateNonConst();
+//  robot_state_.setToDefaultValues();
+
+//  whole_body_jmg_->getVariableRandomPositions(rng_, whole_body_joint_values_);
+
+  std::map<std::string, double> joint_positions_map;
+  state.copyJointGroupPositions(whole_body_jmg_, whole_body_joint_values_);
+  for (int i = 0; i < whole_body_joint_names_.size(); i++)
+  {
+    joint_positions_map.insert(std::pair<std::string, double>(whole_body_joint_names_[i], whole_body_joint_values_[i]));
+  }
+
+//  robot_state_.setVariablePositions(joint_positions_map);
+
+  //KDL::Vector com;
+  KDL::Frame ident = KDL::Frame::Identity();
+
+  computeCOMRecurs(kdl_tree_.getRootSegment(), joint_positions_map, ident);
+
+  if (totoal_mass_ < 0.0)
+  {
+    ROS_WARN("Total mass less than 0");
+    com_.setValue(0.0, 0.0, 0.0);
+  }
+
+  com = com * 1.0/totoal_mass_;
+  com_.setValue(com.x(), com.y(), com.z());
+
+  p_com_ = com_;
+  p_com_.setZ(0.0);
+
+  moveit_msgs::DisplayRobotState robot_state_msg_;
+  robot_state::robotStateToRobotStateMsg(state, robot_state_msg_.state);
+  robot_state_publisher_.publish(robot_state_msg_);
+
+  geometry_msgs::PolygonStamped foot_polygon = getSupportPolygon();
+  visualization_msgs::Marker com_marker = getCOMMarker();
+  visualization_msgs::Marker p_com_marker = getPorjectedCOMMarker();
+
+  support_polygon_pub_.publish(foot_polygon);
+  pcom_pub_.publish(p_com_marker);
+  com_pub_.publish(com_marker);
+
+  return true;
+
+}
+
 bool StableConfigGenerator::isFeasible(const robot_state::RobotState& robot_state)
 {
   bool statically_stable = false;

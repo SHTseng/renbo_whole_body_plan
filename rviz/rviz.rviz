@@ -5,10 +5,11 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Grid1/Offset1
-        - /RobotState1
+        - /RobotState2
         - /RobotState2/Links1/r_gripper1
         - /RobotState2/Links1/r_gripper1/Position1
         - /RobotState2/Links1/r_gripper1/Orientation1
+        - /RobotState2/Links1/r_sole1
         - /PlanningScene1/Scene Geometry1
         - /PlanningScene1/Scene Robot1
         - /Trajectory1
@@ -382,7 +383,7 @@ Visualization Manager:
           Value: true
         r_sole:
           Alpha: 1
-          Show Axes: true
+          Show Axes: false
           Show Trail: false
         r_wrist_link:
           Alpha: 1
@@ -410,13 +411,13 @@ Visualization Manager:
           Show Trail: false
           Value: true
       Name: RobotState
-      Robot Alpha: 0.300000012
+      Robot Alpha: 0.699999988
       Robot Description: robot_description
       Robot State Topic: /whole_body_plan/goal_state
       Show All Links: true
       Show Highlights: true
       Value: true
-      Visual Enabled: false
+      Visual Enabled: true
     - Alpha: 1
       Class: rviz/Polygon
       Color: 25; 255; 0
@@ -454,7 +455,7 @@ Visualization Manager:
       Marker Topic: /whole_body_plan/planned_path_marker
       Name: MarkerArray
       Namespaces:
-        {}
+        Cylinder: true
       Queue Size: 100
       Value: true
     - Class: moveit_rviz_plugin/PlanningScene
@@ -1042,7 +1043,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 3.46956015
+      Distance: 3.41034842
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
@@ -1056,10 +1057,10 @@ Visualization Manager:
       Focal Shape Size: 0.0500000007
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.304797173
+      Pitch: 0.319797218
       Target Frame: base_footprint
       Value: XYOrbit (rviz)
-      Yaw: 5.6390605
+      Yaw: 0.915896416
     Saved: ~
 Window Geometry:
   Displays:

@@ -41,6 +41,8 @@ public:
 
   bool generate_ds_database(rrt_planner_msgs::Generate_DS_Configs::Request &req, rrt_planner_msgs::Generate_DS_Configs::Response &res);
 
+  bool compute_robot_com(rrt_planner_msgs::Generate_DS_Configs::Request &req, rrt_planner_msgs::Generate_DS_Configs::Response &res);
+
   bool sc_generator_test(rrt_planner_msgs::SC_Generator_Test::Request &req, rrt_planner_msgs::SC_Generator_Test::Response &res);
 
   bool rrt_planner_test(rrt_planner_msgs::compute_motion_plan::Request &req, rrt_planner_msgs::compute_motion_plan::Response &res);
@@ -48,6 +50,8 @@ public:
   bool final_pose_planning(rrt_planner_msgs::Final_Pose_Planning::Request &req, rrt_planner_msgs::Final_Pose_Planning::Response &res);
 
   bool pick_place_motion_plan(rrt_planner_msgs::compute_motion_plan::Request &req, rrt_planner_msgs::compute_motion_plan::Response &res);
+
+  bool multi_goal_rrt_planner(rrt_planner_msgs::compute_motion_plan::Request &req, rrt_planner_msgs::compute_motion_plan::Response &res);
 
 private:
 
@@ -87,6 +91,8 @@ private:
   std::shared_ptr<renbo_constraint_sampler::StableConfigGenerator> scg_;
 
   std::shared_ptr<renbo_planner::RRTConnectPlanner> rrt_;
+
+  std::shared_ptr<renbo_planner::MultiGoalRRTPlanner> mg_rrt_;
 
   std::shared_ptr<renbo_planner::FinalPosePlanner> fpp_;
 
@@ -136,7 +142,7 @@ private:
   int scenario_;
 
   int test_flag_;
-  bool write_pose_;
+  bool write_file_;
   bool verbose_;
 
 };

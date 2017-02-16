@@ -53,6 +53,8 @@ public:
   */
   bool sampleSSConfig(int max_samples, std::string file_destination);
 
+  bool computeRobotCoM(const robot_state::RobotState& state);
+
   int getNumConfig();
 
   void setSupportMode(FootSupport support_mode);

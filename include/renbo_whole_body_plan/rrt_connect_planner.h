@@ -47,23 +47,23 @@ struct node
 
 struct tree
 {
-  std::string name;
+  int id;
   std::vector<node> nodes;
   int num_nodes;
 };
 
 enum status{ADVANCED, REACHED, TRAPPED};
 
-typedef std::vector< std::vector<double> > Trajectory;
+typedef std::vector< std::vector<double> > trajectory;
 
 
 class RRTConnectPlanner
 {
 public:
 
-  RRTConnectPlanner(std::string group_name, std::string database_pth, std::string solution_path);
+  RRTConnectPlanner(std::string group_name, std::string database_pth, bool write_file);
 
-  ~RRTConnectPlanner();
+  virtual ~RRTConnectPlanner();
 
   bool setStartGoalConfigs(std::vector<double> start_config , std::vector<double> goal_config);
 
@@ -73,8 +73,6 @@ public:
 
   void setAttachCollsionObject(const moveit_msgs::AttachedCollisionObject& attach_object);
 
-  void setDatabasePath(const std::string& path);
-
   void setVisualizationSwtich(bool on_off);
 
   void setVerbose(bool verbose);
@@ -83,16 +81,12 @@ public:
 
   bool is_grasped = false;
 
-private:
+protected:
 
   bool loadDSDatabase(std::string path);
 
   // Add a random valid config to the node
   void getRandomStableConfig(node &sample);
-
-  /*
-   * RRT related functions
-   */
 
   //Searches for the nearest neighbor of q_rand according to some distance metric
   void findNearestNeighbour(tree T_current, node q_rand, node &nearest_neighbor);
@@ -109,16 +103,14 @@ private:
   //Add a configuration to the tree
   void addConfigtoTree(tree &input_tree, node q_near, node q_new_modified);
 
-  /*
-   * Check whether the robot configuration is valid or not, check collision and statically stable.
-  */
-
-  bool checkCollision(planning_scene::PlanningScenePtr ps_, const std::vector<double> config);
+  bool checkCollision(const std::vector<double> config);
 
   bool checkCollision(const moveit::core::RobotState& state);
 
   //Write the solution path configurations into a file
-  void writePath(tree T_start, tree T_goal, node q_near, int connector, moveit_msgs::DisplayTrajectory &trajectory, std::string solution_file_path);
+  void writePath(tree T_start, tree T_goal, node q_near,
+                 int connector, moveit_msgs::DisplayTrajectory&disp_trajectory_msgs,
+                 std::string solution_file_path);
 
   //Interpolate two waypoints of the raw solution path
   moveit_msgs::DisplayTrajectory interpolateWaypoints(std::vector<double> waypoint_start,std::vector<double> waypoint_goal, int num_intermediate_waypoints);
@@ -126,14 +118,13 @@ private:
   //Interpolate the waypoints of the shortcutted path
   void interpolateShortPathWaypoints(std::vector<std::vector<double> > short_path, std::vector<std::vector<double> > &interpolated_path, int num_intermediate_waypoints);
 
-  void linearInterpolation(Trajectory short_path, Trajectory &interpolated_path, int num_intermediate_waypoints);
+  void linearInterpolation(trajectory short_path, trajectory &interpolated_path, int num_intermediate_waypoints);
 
   /*
    * Path Shortcutter:
-     Given the raw solution path tries to reduce the number of waypoints/configurations while maintaining validity of the path
-   *
+   * Given the raw solution path tries to reduce the number of waypoints/configurations while maintaining validity of the path
    */
-  bool pathShortCutter(Trajectory raw_path, Trajectory &shortcutted_path, int num_intermediate_waypoints);
+  bool pathShortCutter(trajectory raw_path, trajectory &shortcutted_path, int num_intermediate_waypoints);
 
   //Generate a Trajectory from the array "path"
   void generateTrajectory(std::vector< std::vector<double> > path, int num_configs, moveit_msgs::DisplayTrajectory &disp_traj);
@@ -194,7 +185,7 @@ private:
 
   double step_size_;
 
-  Trajectory solution_path_configs_;
+  trajectory solution_path_configs_;
 
   moveit_msgs::AttachedCollisionObject attached_collision_object_;
 
@@ -204,9 +195,30 @@ private:
 
   random_numbers::RandomNumberGenerator rng_;
 
+  bool write_file_;
+
   bool visualize_path_;
 
   bool verbose_;
+
+};
+
+class MultiGoalRRTPlanner: public RRTConnectPlanner
+{
+
+public:
+
+  MultiGoalRRTPlanner(std::string group_name, std::string database_pth, bool write_file);
+
+  virtual ~MultiGoalRRTPlanner() = default;
+
+  bool setStartGoalConfigs(std::vector<double> start_config , std::vector< std::vector<double> > goal_configs);
+
+  moveit_msgs::DisplayTrajectory solve(int max_iter, double max_step_size);
+
+private:
+
+  std::vector<tree> goal_trees_;
 
 };
 

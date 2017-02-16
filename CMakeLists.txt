@@ -89,17 +89,20 @@ target_link_libraries(planning_node ${PROJECT_NAME})
 add_executable(whole_body_plan_demo src/whole_body_plan_demo.cpp)
 target_link_libraries(whole_body_plan_demo ${PROJECT_NAME})
 
-add_executable(renbo_test_drake src/test/renbo_test_drake.cpp)
-target_link_libraries(renbo_test_drake
-        ${PROJECT_NAME}
-        ${catkin_LIBRARIES}
-        drakeCommon
-        drakeIK
-        drakeMultibodyParsers
-        drakeRBM
-        drakeRigidBodyPlant
-        drakeCollision
-        drakeGeometryUtil
-        drakeShapes
-        spruce
-        tinyxml2)
+add_executable(compute_com src/test/compute_com.cpp)
+target_link_libraries(compute_com ${PROJECT_NAME})
+
+#add_executable(renbo_test_drake src/test/renbo_test_drake.cpp)
+#target_link_libraries(renbo_test_drake
+#        ${PROJECT_NAME}
+#        ${catkin_LIBRARIES}
+#        drakeCommon
+#        drakeIK
+#        drakeMultibodyParsers
+#        drakeRBM
+#        drakeRigidBodyPlant
+#        drakeCollision
+#        drakeGeometryUtil
+#        drakeShapes
+#        spruce
+#        tinyxml2)
