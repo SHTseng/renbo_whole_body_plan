@@ -62,6 +62,8 @@ RenboPlanner::RenboPlanner():
 
   mg_rrt_.reset(new renbo_planner::MultiGoalRRTPlanner(PLANNING_GROUP, ds_database_path_, write_file_));
 
+  mg_rrt_->setVerbose(verbose_);
+
   rrt_.reset(new renbo_planner::RRTConnectPlanner(PLANNING_GROUP, ds_database_path_, write_file_));
 
   rrt_->setVerbose(verbose_);
@@ -388,11 +390,11 @@ bool RenboPlanner::pick_place_motion_plan(rrt_planner_msgs::compute_motion_plan:
 
   Eigen::Affine3d grasp_object_pose;
   grasp_object_pose = robot_state_.getGlobalLinkTransform(eef_name_);
-//  Eigen::Vector3d transformed_translation = grasp_object_pose.rotation() * Eigen::Vector3d(-0.16, 0.0, 0.0);
-  //grasp_object_pose.rotate(Eigen::AngleAxisd(M_PI/2, Eigen::Vector3d::UnitY()));
+  Eigen::Vector3d transformed_translation = grasp_object_pose.rotation() * Eigen::Vector3d(-0.16, 0.0, 0.0);
+  grasp_object_pose.rotate(Eigen::AngleAxisd(M_PI/2, Eigen::Vector3d::UnitY()));
 
-  grasp_object_pose.rotate(Eigen::AngleAxisd(-M_PI/2, Eigen::Vector3d::UnitX()));
-  Eigen::Vector3d transformed_translation = grasp_object_pose.rotation() * Eigen::Vector3d(0.0, 0.0, -0.22);
+//  grasp_object_pose.rotate(Eigen::AngleAxisd(-M_PI/2, Eigen::Vector3d::UnitX()));
+//  Eigen::Vector3d transformed_translation = grasp_object_pose.rotation() * Eigen::Vector3d(0.0, 0.0, -0.22);
 
   grasp_object_pose.translation() += transformed_translation;
 
@@ -501,15 +503,6 @@ bool RenboPlanner::multi_goal_rrt_planner(rrt_planner_msgs::compute_motion_plan:
 
   ROS_INFO_STREAM("Solved pick pose");
 
-  //Setup place pose
-  std::vector<double> place_config(wb_jmg_->getVariableCount());
-  final_pose_flag = fpp_->solveFinalPose(robot_state_, eef_place_pose, waist_place_pose, place_config);
-  if (!final_pose_flag)
-  {
-    ROS_INFO_STREAM("Solve place pose fail");
-    return false;
-  }
-
   robot_state_.setVariablePositions(wb_jmg_->getJointModelNames(), pick_config);
   robot_state_.update();
   updatePSMRobotState(robot_state_);
@@ -523,10 +516,6 @@ bool RenboPlanner::multi_goal_rrt_planner(rrt_planner_msgs::compute_motion_plan:
   grasp_object_pose = robot_state_.getGlobalLinkTransform(eef_name_);
   Eigen::Vector3d transformed_translation = grasp_object_pose.rotation() * Eigen::Vector3d(-0.16, 0.0, 0.0);
   grasp_object_pose.rotate(Eigen::AngleAxisd(M_PI/2, Eigen::Vector3d::UnitY()));
-
-//  grasp_object_pose.rotate(Eigen::AngleAxisd(-M_PI/2, Eigen::Vector3d::UnitX()));
-//  Eigen::Vector3d transformed_translation = grasp_object_pose.rotation() * Eigen::Vector3d(0.0, 0.0, -0.22);
-
   grasp_object_pose.translation() += transformed_translation;
 
   std::vector<double> initial_config(wb_jmg_->getVariableCount());
@@ -537,8 +526,14 @@ bool RenboPlanner::multi_goal_rrt_planner(rrt_planner_msgs::compute_motion_plan:
     goal_configs[i] = initial_config;
   }
 
+  goal_configs[0] = pick_config;
+
+  mg_rrt_->updateEnvironment(psm_->getPlanningScene());
   mg_rrt_ ->setStartGoalConfigs(initial_config, goal_configs);
-  mg_rrt_->solve(20000, 0.1);
+
+  moveit_msgs::DisplayTrajectory display_trajectory_ = mg_rrt_->solve(TIME_OUT, 0.1);
+  init_pick_trajectory_pub_.publish(display_trajectory_);
+  ros::Duration(1.0).sleep();
 
   return true;
 }
@@ -907,6 +902,7 @@ void RenboPlanner::loadYamlParameter()
   nh_.param("planner_step_factor", ADVANCE_STEPS, 0.1);
   nh_.param("planner_max_iterations", MAX_EXPAND_ITERATIONS, 8000);
   nh_.param("visualize_planning_path", VISUALIZE_PLANNING_PATH, false);
+  nh_.param("rrt_time_out", TIME_OUT, 60.0);
 
   // file paths
   nh_.param("file_path_DS_database", ds_database_path_, std::string("package://renbo_whole_body_plan/database/ds_dataset.dat"));

@@ -19,7 +19,7 @@ RRTConnectPlanner::RRTConnectPlanner(std::string group_name, std::string databas
   eef_name_("r_gripper"),
   is_grasped(false),
   step_size_(0.05),
-  write_file_(false),
+  write_file_(write_file),
   verbose_(false)
 {
   robot_model_loader_.reset(new robot_model_loader::RobotModelLoader("robot_description"));
@@ -82,7 +82,7 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
   {
     ps_->processAttachedCollisionObjectMsg(attached_collision_object_);
     robot_state_ = ps_->getCurrentStateNonConst();
-    ros::Duration(2.0).sleep();
+    ros::Duration(1.0).sleep();
   }
 
   moveit_msgs::DisplayTrajectory sln_traj;
@@ -103,10 +103,10 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
 
   start_time = ros::Time::now();
 
-  ROS_INFO("RRT planner: start iteration");
+  ROS_INFO("RRT-Connect planner: start iteration");
   for (int i = 0; i < max_iter; i++)
   {
-    getRandomStableConfig(q_rand);
+    q_rand = getRandomStableConfig();
 
     if (swap == false)
     {
@@ -134,14 +134,14 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
               state_.setVariablePositions(wb_joint_names_, solution_path_configs_[i]);
               Eigen::Affine3d eef_pose = state_.getGlobalLinkTransform(eef_name_);
 
-//              rviz_visual_tools_->publishSphere(eef_pose, rviz_visual_tools::ORANGE, rviz_visual_tools::MEDIUM);
+              rviz_visual_tools_->publishSphere(eef_pose, rviz_visual_tools::ORANGE, rviz_visual_tools::MEDIUM);
 //              rviz_visual_tools_->trigger();
 
               path_pts.push_back(eef_pose);
             }
 
-//            rviz_visual_tools_->publishPath(path_pts, rviz_visual_tools::YELLOW, rviz_visual_tools::MEDIUM);
-//            rviz_visual_tools_->trigger();
+            rviz_visual_tools_->publishPath(path_pts, rviz_visual_tools::YELLOW, rviz_visual_tools::MEDIUM);
+            rviz_visual_tools_->trigger();
           }
 
           end_time = ros::Time::now();
@@ -192,14 +192,14 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
               state_.setVariablePositions(wb_joint_names_, solution_path_configs_[i]);
               Eigen::Affine3d eef_pose = state_.getGlobalLinkTransform(eef_name_);
 
-//              rviz_visual_tools_->publishSphere(eef_pose, rviz_visual_tools::ORANGE, rviz_visual_tools::MEDIUM);
+              rviz_visual_tools_->publishSphere(eef_pose, rviz_visual_tools::ORANGE, rviz_visual_tools::MEDIUM);
 //              rviz_visual_tools_->trigger();
 
               path_pts.push_back(eef_pose);
             }
 
-//            rviz_visual_tools_->publishPath(path_pts, rviz_visual_tools::YELLOW, rviz_visual_tools::MEDIUM);
-//            rviz_visual_tools_->trigger();
+            rviz_visual_tools_->publishPath(path_pts, rviz_visual_tools::YELLOW, rviz_visual_tools::MEDIUM);
+            rviz_visual_tools_->trigger();
           }
 
           end_time = ros::Time::now();
@@ -284,7 +284,7 @@ status RRTConnectPlanner::extendTree(tree &input_tree, node q_rand, node &q_near
   robot_state_.setToDefaultValues();
 
   // finding the nearest node of q_rand and save as q_near
-  findNearestNeighbour(input_tree, q_rand, q_near);
+  q_near = findNearestNeighbour(input_tree, q_rand);
 
   // try to connect q_rand and q_near with fixed step size
   stat = generate_q_new(q_near, q_rand, q_new);
@@ -342,7 +342,7 @@ status RRTConnectPlanner::extendTree(tree &input_tree, node q_rand, node &q_near
           robot_state::robotStateToRobotStateMsg(state, robot_state_msg_.state);
           robot_state_publisher_.publish(robot_state_msg_);
 
-          ros::Duration(1.0).sleep();
+          ros::Duration(0.2).sleep();
         }
       }
       else
@@ -370,21 +370,31 @@ status RRTConnectPlanner::extendTree(tree &input_tree, node q_rand, node &q_near
           }
 
           robot_state_publisher_.publish(robot_state_msg_);
-          ros::Duration(1.0).sleep();
+          ros::Duration(0.2).sleep();
 
           ROS_INFO_STREAM("extend tree: state in collision return trapped");
         }
 
         stat = TRAPPED;
-
       }
     }
 
   }
   else if (stat == REACHED)
   {
+    state.copyJointGroupPositions(wb_jmg_, q_new_modified.config);
+    addConfigtoTree(input_tree, q_near, q_new_modified);
+
     if(verbose_)
+    {
       ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "Reached q_rand");
+
+      moveit_msgs::DisplayRobotState robot_state_msg_;
+      robot_state::robotStateToRobotStateMsg(state, robot_state_msg_.state);
+      robot_state_publisher_.publish(robot_state_msg_);
+
+      ros::Duration(0.2).sleep();
+    }
   }
   else
   {
@@ -400,20 +410,19 @@ status RRTConnectPlanner::extendTree(tree &input_tree, node q_rand, node &q_near
 
 status RRTConnectPlanner::connectTree(tree &input_tree, node q_connect, node &q_near, moveit::core::RobotState& state)
 {
-  status stat = ADVANCED;
+  status status_ = ADVANCED;
   node current_q_near;
   int prev_node_index = -1;
   int iteration_cnt = 0;
 
-  findNearestNeighbour(input_tree, q_connect, q_near);
-
+  q_near = findNearestNeighbour(input_tree, q_connect);
   current_q_near = q_near;
 
-  while (stat == ADVANCED)
+  while (status_ == ADVANCED)
   {
-    stat = extendTree(input_tree, q_connect, current_q_near, state);
+    status_ = extendTree(input_tree, q_connect, current_q_near, state);
 
-    if (stat == REACHED)
+    if (status_ == REACHED)
     {
       q_near = current_q_near;
     }
@@ -424,9 +433,9 @@ status RRTConnectPlanner::connectTree(tree &input_tree, node q_connect, node &q_
         // test for solving rrt loop stuck
         q_near = current_q_near;
 
-        stat = TRAPPED;
+        status_ = TRAPPED;
         ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "Cant find closer node return TRAPPED");
-        return stat;
+        return status_;
       }
       else
       {
@@ -435,21 +444,22 @@ status RRTConnectPlanner::connectTree(tree &input_tree, node q_connect, node &q_
       }
     }
 
-    iteration_cnt++;
-
     if (iteration_cnt == 300)
+    {
       return TRAPPED;
+    }
+    iteration_cnt++;
   }
 
   if (verbose_)
   {
-    ROS_INFO_STREAM("Connect Tree State: " << stat);
+    ROS_INFO_STREAM("Connect Tree State: " << status_);
   }
 
-  return stat;
+  return status_;
 }
 
-void RRTConnectPlanner::findNearestNeighbour(tree T_current, node q_rand, node &nearest_neighbor)
+node RRTConnectPlanner::findNearestNeighbour(tree input_tree, node q_rand)
 {
   int nn_index = -1;
   std::vector<double> distance(wb_num_joint_);
@@ -458,14 +468,14 @@ void RRTConnectPlanner::findNearestNeighbour(tree T_current, node q_rand, node &
   double best_norm = 100000.0;
 
   // start calculating the distance from q_rand to each node
-  for (std::size_t i = 0; i < T_current.num_nodes; i++)
+  for (std::size_t i = 0; i < input_tree.num_nodes; i++)
   {
     sum_sqrt = 0.0;
 
     // calculate euclidean distance between q random to nodes in the input tree
     for (std::size_t n = 0; n < wb_num_joint_; n++)
     {
-      distance[n] = q_rand.config[n] - T_current.nodes[i].config[n];
+      distance[n] = q_rand.config[n] - input_tree.nodes[i].config[n];
       sum_sqrt += distance[n]*distance[n];
     }
 
@@ -478,6 +488,7 @@ void RRTConnectPlanner::findNearestNeighbour(tree T_current, node q_rand, node &
     }
   }
 
+  node q_near;
   //Check if a neighbor has been found
   if (nn_index < 0)
   {
@@ -486,22 +497,12 @@ void RRTConnectPlanner::findNearestNeighbour(tree T_current, node q_rand, node &
   }
   else
   {
-    //Assign index of q_near found in the Tree to nearest_neighbor
-    nearest_neighbor.index = T_current.nodes[nn_index].index;
-
-    //Set the predecessor_index
-    nearest_neighbor.predecessor_index = T_current.nodes[nn_index].predecessor_index;
-
-    //Set the configuration of nearest_neighbor
-    nearest_neighbor.config =  T_current.nodes[nn_index].config;
-
-
-    //ROS_INFO_STREAM("nearest neighbor index: " << nearest_neighbor.index);
-
-    //Set the cart_hand_pose_index of the nearest neighbor (only used for manipulation of articulated ojects)
-//      if (articulation_constraint_active_ == true)
-//        nearest_neighbor.cart_hand_pose_index =  T_current.nodes[nn_index].cart_hand_pose_index;
+    q_near.index = input_tree.nodes[nn_index].index;
+    q_near.predecessor_index = input_tree.nodes[nn_index].predecessor_index;
+    q_near.config =  input_tree.nodes[nn_index].config;
   }
+
+  return q_near;
 }
 
 // TODO: add collision and stability checking
@@ -571,6 +572,20 @@ void RRTConnectPlanner::addConfigtoTree(tree &input_tree, node q_near, node q_ne
 
   input_tree.nodes.push_back(q_new_modified);
   input_tree.num_nodes = input_tree.nodes.size();
+}
+
+void RRTConnectPlanner::swapTree(tree &tree_a, tree &tree_b)
+{
+  std::vector<node> nodes_temp = tree_a.nodes;
+  int num_nodes_temp = tree_a.num_nodes;
+
+  tree_a.nodes.clear();
+  tree_a.nodes = tree_b.nodes;
+  tree_a.num_nodes = tree_b.num_nodes;
+
+  tree_b.nodes.clear();
+  tree_b.nodes = nodes_temp;
+  tree_b.num_nodes = num_nodes_temp;
 }
 
 void RRTConnectPlanner::writePath(tree T_start, tree T_goal, node q_near,
@@ -995,25 +1010,15 @@ void RRTConnectPlanner::linearInterpolation(trajectory short_path,
   }
 }
 
-void RRTConnectPlanner::getRandomStableConfig(node &sample)
+node RRTConnectPlanner::getRandomStableConfig()
 {
-//  if (ds_database_configs_.empty())
-//  {
-//    if (!loadDSDatabase(database_path_))
-//    {
-//      ROS_ERROR("Load database fail fail");
-//    }
-//  }
-
+  node sample;
   int lb = 0, ub = ds_database_config_count_ - 1;
   int rnd_idx = floor(rng_.uniformReal(lb, ub));
 
   sample.config = ds_database_configs_[rnd_idx];
 
-  if (verbose_)
-  {
-    ROS_INFO_STREAM("Random sampled index: " << rnd_idx);
-  }
+  return sample;
 }
 
 bool RRTConnectPlanner::loadDSDatabase(std::string path)
@@ -1178,7 +1183,7 @@ bool RRTConnectPlanner::TEST(int test_flag)
     start_tree.nodes.push_back(start_node);
     start_tree.num_nodes = 1;
 
-    getRandomStableConfig(q_rand);
+    q_rand = getRandomStableConfig();
 
     wb_jnt_pos_map_.clear();
     for (int i = 0; i < wb_joint_names_.size(); i++)
@@ -1200,13 +1205,10 @@ bool RRTConnectPlanner::TEST(int test_flag)
     if (collision_free)
     {
       ROS_INFO_STREAM("Robot is in collision free");
-
       PAUSE();
 
+      node q_near = findNearestNeighbour(start_tree, q_rand);
       status tree_stat = ADVANCED;
-
-      findNearestNeighbour(start_tree, q_rand, q_near);
-
       tree_stat = connectTree(start_tree, q_rand, q_near, current_state);
 
     }
@@ -1247,7 +1249,7 @@ bool RRTConnectPlanner::TEST(int test_flag)
     std::fill(start_config.begin(), start_config.end(), 0.0);
 
     node q_rand;
-    getRandomStableConfig(q_rand);
+    q_rand = getRandomStableConfig();
 
     wb_jnt_pos_map_.clear();
     for (int i = 0; i < wb_joint_names_.size(); i++)
@@ -1524,175 +1526,72 @@ MultiGoalRRTPlanner::MultiGoalRRTPlanner(std::string group_name, std::string dat
 
 }
 
-moveit_msgs::DisplayTrajectory MultiGoalRRTPlanner::solve(int max_iter, double max_step_size)
+moveit_msgs::DisplayTrajectory MultiGoalRRTPlanner::solve(double time_out, double step_size)
 {
   rviz_visual_tools_->deleteAllMarkers();
   rviz_visual_tools_->trigger();
 
   ROS_INFO_STREAM("start query path between initial and goal state");
-  step_size_ = max_step_size;
+  step_size_ = step_size;
 
   robot_state::RobotState robot_state_ = ps_->getCurrentStateNonConst();
   robot_state_.setToDefaultValues();
   robot_state_.update();
 
-  robot_state::RobotState state_ = ps_->getCurrentStateNonConst();
-  state_.setToDefaultValues();
-  state_.update();
-
   moveit_msgs::DisplayTrajectory sln_traj;
-  node q_rand, q_near;
-  status rrt_status, path_found;
-  bool swap = false;
-  int num_node_generated = 0, swap_cnt = 0;
 
-  ros::Time start_time, end_time;
-  ros::Duration dura;
+  if (!loadDSDatabase(database_path_))
+  {
+    ROS_ERROR("Load database fail fail");
+    return sln_traj;
+  }
+  ros::Duration(1.0).sleep();
 
-  ROS_INFO_STREAM("initial tree size:" << tree_start_.nodes.size());
-  ROS_INFO_STREAM("goal tree size:" << goal_trees_.size());
+  ros::Time start_time = ros::Time::now();
 
-//  if (!loadDSDatabase(database_path_))
-//  {
-//    ROS_ERROR("Load database fail fail");
-//    return sln_traj;
-//  }
-//  ros::Duration(1.0).sleep();
+  ROS_INFO("Multi-Goal RRT planner: start iteration");
 
-//  start_time = ros::Time::now();
+  while((ros::Time::now()-start_time).sec < time_out)
+  {
+    node q_rand = getRandomStableConfig();
+    node q_a_near = findNearestNeighbour(tree_start_, q_rand);
+    status rrt_status = extendTree(tree_start_, q_rand, q_a_near, robot_state_);
 
-//  ROS_INFO("Multi-Goal RRT planner: start iteration");
-//  for (int i = 0; i < max_iter; i++)
-//  {
-//    getRandomStableConfig(q_rand);
+    node q_b_near = findNearestNeighbour(goal_trees_[0], tree_start_.nodes.back());
+    rrt_status = connectTree(goal_trees_[0], tree_start_.nodes.back(), q_b_near, robot_state_);
 
-//    if (swap == false)
-//    {
-//      rrt_status = extendTree(tree_start_, q_rand, q_near, robot_state_);
+    if (q_b_near.config == q_a_near.config)
+    {
+      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_CYAN << "q_a_near reached q_b_near");
+      if (tree_start_.id == 0)
+      {
+        writePath(tree_start_, goal_trees_[0], q_b_near, 1, sln_traj, solution_file_path_);
+      }
+      else
+      {
+        writePath(tree_start_, goal_trees_[0], q_b_near, 2, sln_traj, solution_file_path_);
+      }
 
-//      if (rrt_status != TRAPPED)
-//      {
-//        path_found = connectTree(tree_goal_, tree_start_.nodes.back(), q_near, robot_state_);
+      ros::Duration time_elapsed = ros::Time::now() - start_time;
+      int num_node_generated =  tree_start_.num_nodes + goal_trees_[0].num_nodes;
 
-//        if (path_found == REACHED)
-//        {
-//          if (verbose_)
-//          {
-//            ROS_INFO("Path found, tree_goal is connect to tree_start");
-//          }
+      ROS_INFO_STREAM("\nSummary:\n Totoal elapsed time: " << time_elapsed
+                      << " seconds \n Generated " << num_node_generated << " nodes \n");
 
-//          writePath(tree_start_, tree_goal_, q_near, 1, sln_traj, solution_file_path_);
+      return sln_traj;
+    }
+    else
+    {
+      swapTree(tree_start_, goal_trees_[0]);
+//      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_CYAN << "swap tree");
 
-//          if (visualize_path_)
-//          {
-//            EigenSTL::vector_Affine3d path_pts;
+    }
 
-//            for (int i = 0; i < solution_path_configs_.size(); i++)
-//            {
-//              state_.setVariablePositions(wb_joint_names_, solution_path_configs_[i]);
-//              Eigen::Affine3d eef_pose = state_.getGlobalLinkTransform(eef_name_);
+  }
 
-////              rviz_visual_tools_->publishSphere(eef_pose, rviz_visual_tools::ORANGE, rviz_visual_tools::MEDIUM);
-////              rviz_visual_tools_->trigger();
+  resetTrees();
 
-//              path_pts.push_back(eef_pose);
-//            }
-
-////            rviz_visual_tools_->publishPath(path_pts, rviz_visual_tools::YELLOW, rviz_visual_tools::MEDIUM);
-////            rviz_visual_tools_->trigger();
-//          }
-
-//          end_time = ros::Time::now();
-//          dura =  end_time - start_time;
-//          num_node_generated =  tree_start_.num_nodes + tree_goal_.num_nodes;
-
-//          ROS_INFO_STREAM("\nSummary:\n Totoal elapsed time: " << dura
-//                          << " seconds \n Generated " << num_node_generated << " nodes \n"
-//                          << " Swapped " << swap_cnt << " times \n"
-//                          << " Iterate " << i << " times");
-
-//          resetTrees();
-//          return sln_traj;
-//        }
-//        else
-//        {
-//          swap = true;
-//          swap_cnt++;
-//        }
-
-//      }
-//      else
-//      {
-//        swap = true;
-//        swap_cnt++;
-//      }
-//    }
-//    else
-//    {
-//      rrt_status = extendTree(tree_goal_, q_rand, q_near, robot_state_);
-
-//      if (rrt_status != TRAPPED)
-//      {
-//        path_found = connectTree(tree_start_, tree_goal_.nodes.back(), q_near, robot_state_);
-
-//        if (path_found == REACHED)
-//        {
-//          ROS_INFO("Path found, tree_start is connect to tree_goal");
-
-//          writePath(tree_start_, tree_goal_, q_near, 2, sln_traj, solution_file_path_);
-
-//          if (visualize_path_)
-//          {
-//            EigenSTL::vector_Affine3d path_pts;
-
-//            for (int i = 0; i < solution_path_configs_.size(); i++)
-//            {
-//              state_.setVariablePositions(wb_joint_names_, solution_path_configs_[i]);
-//              Eigen::Affine3d eef_pose = state_.getGlobalLinkTransform(eef_name_);
-
-////              rviz_visual_tools_->publishSphere(eef_pose, rviz_visual_tools::ORANGE, rviz_visual_tools::MEDIUM);
-////              rviz_visual_tools_->trigger();
-
-//              path_pts.push_back(eef_pose);
-//            }
-
-////            rviz_visual_tools_->publishPath(path_pts, rviz_visual_tools::YELLOW, rviz_visual_tools::MEDIUM);
-////            rviz_visual_tools_->trigger();
-//          }
-
-//          end_time = ros::Time::now();
-//          dura =  end_time - start_time;
-//          num_node_generated =  tree_start_.num_nodes + tree_goal_.num_nodes;
-
-//          ROS_INFO_STREAM("\nSummary:\n Totoal elapsed time: " << dura
-//                          << " seconds \n Generated " << num_node_generated << " nodes \n"
-//                          << " Swapped " << swap_cnt << " times \n"
-//                          << " Iterate " << i << " times");
-
-
-//          resetTrees();
-//          return sln_traj;
-//        }
-//        else
-//        {
-//          swap = false;
-//          swap_cnt++;
-//        }
-
-//      }
-//      else
-//      {
-//        swap = false;
-//        swap_cnt++;
-//      }
-
-//    }
-
-//  }
-
-//  resetTrees();
-
-//  ROS_ERROR("No solution path found");
+  ROS_ERROR("No solution path found");
 
   return sln_traj;
 

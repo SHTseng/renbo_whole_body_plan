@@ -137,12 +137,17 @@ private:
   bool VISUALIZE_PLANNING_PATH;
 
   std::string ds_database_path_;
+
   int DS_CONFIG_COUNT;
 
   int scenario_;
 
+  double TIME_OUT;
+
   int test_flag_;
+
   bool write_file_;
+
   bool verbose_;
 
 };

@@ -5,6 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Grid1/Offset1
+        - /RobotState1
         - /RobotState2
         - /RobotState2/Links1/r_gripper1
         - /RobotState2/Links1/r_gripper1/Position1
@@ -12,8 +13,6 @@ Panels:
         - /RobotState2/Links1/r_sole1
         - /PlanningScene1/Scene Geometry1
         - /PlanningScene1/Scene Robot1
-        - /Trajectory1
-        - /Trajectory2
       Splitter Ratio: 0.564023972
     Tree Height: 893
   - Class: rviz/Help
@@ -224,13 +223,13 @@ Visualization Manager:
           Show Trail: false
           Value: true
       Name: RobotState
-      Robot Alpha: 1
+      Robot Alpha: 0.5
       Robot Description: robot_description
       Robot State Topic: /whole_body_plan/renbo_robot_state
       Show All Links: true
       Show Highlights: true
       Value: true
-      Visual Enabled: false
+      Visual Enabled: true
     - Attached Body Color: 150; 50; 150
       Class: moveit_rviz_plugin/RobotState
       Collision Enabled: false
@@ -411,7 +410,7 @@ Visualization Manager:
           Show Trail: false
           Value: true
       Name: RobotState
-      Robot Alpha: 0.699999988
+      Robot Alpha: 0.5
       Robot Description: robot_description
       Robot State Topic: /whole_body_plan/goal_state
       Show All Links: true
@@ -455,7 +454,7 @@ Visualization Manager:
       Marker Topic: /whole_body_plan/planned_path_marker
       Name: MarkerArray
       Namespaces:
-        Cylinder: true
+        {}
       Queue Size: 100
       Value: true
     - Class: moveit_rviz_plugin/PlanningScene
@@ -1043,7 +1042,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 3.41034842
+      Distance: 4.65429831
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
@@ -1057,10 +1056,10 @@ Visualization Manager:
       Focal Shape Size: 0.0500000007
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.319797218
+      Pitch: 0.419797122
       Target Frame: base_footprint
       Value: XYOrbit (rviz)
-      Yaw: 0.915896416
+      Yaw: 5.86408424
     Saved: ~
 Window Geometry:
   Displays:

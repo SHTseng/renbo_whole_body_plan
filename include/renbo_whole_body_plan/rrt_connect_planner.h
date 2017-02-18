@@ -20,7 +20,6 @@
 #include <moveit_msgs/DisplayTrajectory.h>
 #include <moveit_msgs/AttachedCollisionObject.h>
 
-#include <renbo_whole_body_plan/stable_config_generator.h>
 #include <renbo_whole_body_plan/double_support_constraint.h>
 
 #include <hrl_kinematics/TestStability.h>
@@ -86,10 +85,10 @@ protected:
   bool loadDSDatabase(std::string path);
 
   // Add a random valid config to the node
-  void getRandomStableConfig(node &sample);
+  node getRandomStableConfig();
 
   //Searches for the nearest neighbor of q_rand according to some distance metric
-  void findNearestNeighbour(tree T_current, node q_rand, node &nearest_neighbor);
+  node findNearestNeighbour(tree input_tree, node q_rand);
 
   //Generate a q_new along the line connecting q_near to q_rand
   status generate_q_new (node q_near, node q_rand, node &q_new);
@@ -102,6 +101,8 @@ protected:
 
   //Add a configuration to the tree
   void addConfigtoTree(tree &input_tree, node q_near, node q_new_modified);
+
+  void swapTree(tree& tree_a, tree& tree_b);
 
   bool checkCollision(const std::vector<double> config);
 
@@ -133,6 +134,8 @@ protected:
 
   void writeLogFile(const double& duration, const int& node_num, const int& interation_time);
 
+  bool timeOut(ros::Time current_time, float time_out);
+
   void PAUSE();
 
   ros::NodeHandle nh_;
@@ -142,8 +145,6 @@ protected:
   ros::Publisher scene_publisher_;
 
   ros::Publisher trajectory_publisher_;
-
-  planning_scene_monitor::PlanningSceneMonitorPtr psm_;
 
   planning_scene::PlanningScenePtr ps_;
 
@@ -214,7 +215,7 @@ public:
 
   bool setStartGoalConfigs(std::vector<double> start_config , std::vector< std::vector<double> > goal_configs);
 
-  moveit_msgs::DisplayTrajectory solve(int max_iter, double max_step_size);
+  moveit_msgs::DisplayTrajectory solve(double time_out, double step_size);
 
 private:
 
