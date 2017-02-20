@@ -5,14 +5,13 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Grid1/Offset1
-        - /RobotState1
-        - /RobotState2
         - /RobotState2/Links1/r_gripper1
         - /RobotState2/Links1/r_gripper1/Position1
         - /RobotState2/Links1/r_gripper1/Orientation1
         - /RobotState2/Links1/r_sole1
         - /PlanningScene1/Scene Geometry1
         - /PlanningScene1/Scene Robot1
+        - /Trajectory1
       Splitter Ratio: 0.564023972
     Tree Height: 893
   - Class: rviz/Help
@@ -229,7 +228,7 @@ Visualization Manager:
       Show All Links: true
       Show Highlights: true
       Value: true
-      Visual Enabled: true
+      Visual Enabled: false
     - Attached Body Color: 150; 50; 150
       Class: moveit_rviz_plugin/RobotState
       Collision Enabled: false
@@ -416,7 +415,7 @@ Visualization Manager:
       Show All Links: true
       Show Highlights: true
       Value: true
-      Visual Enabled: true
+      Visual Enabled: false
     - Alpha: 1
       Class: rviz/Polygon
       Color: 25; 255; 0
@@ -829,7 +828,7 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-      Loop Animation: false
+      Loop Animation: true
       Name: Trajectory
       Robot Alpha: 0.5
       Robot Description: robot_description
@@ -1042,7 +1041,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 4.65429831
+      Distance: 3.55238652
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
@@ -1056,10 +1055,10 @@ Visualization Manager:
       Focal Shape Size: 0.0500000007
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.419797122
+      Pitch: 0.479797006
       Target Frame: base_footprint
       Value: XYOrbit (rviz)
-      Yaw: 5.86408424
+      Yaw: 5.8490839
     Saved: ~
 Window Geometry:
   Displays:

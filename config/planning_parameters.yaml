@@ -1,7 +1,7 @@
 #-----  General Parameters
 planning_group: whole_body_fixed
 scale_sp: 0.8
-write_file: true 
+write_file: false 
 verbose: false
 test_flag: 2
 scenario: 0

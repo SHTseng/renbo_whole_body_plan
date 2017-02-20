@@ -1538,6 +1538,10 @@ moveit_msgs::DisplayTrajectory MultiGoalRRTPlanner::solve(double time_out, doubl
   robot_state_.setToDefaultValues();
   robot_state_.update();
 
+  robot_state::RobotState state_ = ps_->getCurrentStateNonConst();
+  state_.setToDefaultValues();
+  state_.update();
+
   moveit_msgs::DisplayTrajectory sln_traj;
 
   if (!loadDSDatabase(database_path_))
@@ -1548,46 +1552,99 @@ moveit_msgs::DisplayTrajectory MultiGoalRRTPlanner::solve(double time_out, doubl
   ros::Duration(1.0).sleep();
 
   ros::Time start_time = ros::Time::now();
-
+  ros::Time finish_time;
+  bool swap = false;
+  node q_b_near_final;
   ROS_INFO("Multi-Goal RRT planner: start iteration");
 
   while((ros::Time::now()-start_time).sec < time_out)
   {
     node q_rand = getRandomStableConfig();
-    node q_a_near = findNearestNeighbour(tree_start_, q_rand);
-    status rrt_status = extendTree(tree_start_, q_rand, q_a_near, robot_state_);
-
-    node q_b_near = findNearestNeighbour(goal_trees_[0], tree_start_.nodes.back());
-    rrt_status = connectTree(goal_trees_[0], tree_start_.nodes.back(), q_b_near, robot_state_);
-
-    if (q_b_near.config == q_a_near.config)
+    if (!swap)
     {
-      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_CYAN << "q_a_near reached q_b_near");
-      if (tree_start_.id == 0)
+      for (int i = 0; i < goal_trees_.size(); i++)
       {
-        writePath(tree_start_, goal_trees_[0], q_b_near, 1, sln_traj, solution_file_path_);
+        if (goal_trees_[i].is_complete)
+        {
+          continue;
+        }
+        node q_a_near = findNearestNeighbour(tree_start_, q_rand);
+        status rrt_status = extendTree(tree_start_, q_rand, q_a_near, robot_state_);
+        node q_b_near = findNearestNeighbour(goal_trees_[i], tree_start_.nodes.back());
+        rrt_status = connectTree(goal_trees_[i], tree_start_.nodes.back(), q_b_near, robot_state_);
+        if (q_b_near.config == q_a_near.config)
+        {
+          goal_trees_[i].is_complete = true;
+          finish_time = ros::Time::now();
+          q_b_near_final = q_b_near;
+          break;
+        }
+        else
+        {
+          swap = true;
+        }
       }
-      else
-      {
-        writePath(tree_start_, goal_trees_[0], q_b_near, 2, sln_traj, solution_file_path_);
-      }
-
-      ros::Duration time_elapsed = ros::Time::now() - start_time;
-      int num_node_generated =  tree_start_.num_nodes + goal_trees_[0].num_nodes;
-
-      ROS_INFO_STREAM("\nSummary:\n Totoal elapsed time: " << time_elapsed
-                      << " seconds \n Generated " << num_node_generated << " nodes \n");
-
-      return sln_traj;
     }
     else
     {
-      swapTree(tree_start_, goal_trees_[0]);
-//      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_CYAN << "swap tree");
+      for (int i = 0; i < goal_trees_.size(); i++)
+      {
+        if (goal_trees_[i].is_complete)
+        {
+          continue;
+        }
+        node q_a_near = findNearestNeighbour(goal_trees_[i], q_rand);
+        status rrt_status = extendTree(goal_trees_[i], q_rand, q_a_near, robot_state_);
+        node q_b_near = findNearestNeighbour(tree_start_, goal_trees_[i].nodes.back());
+        rrt_status = connectTree(tree_start_, goal_trees_[i].nodes.back(), q_b_near, robot_state_);
+        if (q_b_near.config == q_a_near.config)
+        {
+          goal_trees_[i].is_complete = true;
+          finish_time = ros::Time::now();
+          q_b_near_final = q_b_near;
+          break;
+        }
+        else
+        {
+          swap = false;
+        }
+      }
 
     }
-
   }
+
+//  ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_CYAN << "q_a_near reached q_b_near");
+//  if (tree_start_.id == 0)
+//  {
+//    writePath(tree_start_, goal_trees_[i], q_b_near_final, 1, sln_traj, solution_file_path_);
+//  }
+//  else
+//  {
+//    writePath(tree_start_, goal_trees_[i], q_b_near_final, 2, sln_traj, solution_file_path_);
+//  }
+
+  ros::Duration time_elapsed = finish_time - start_time;
+  int num_node_generated =  tree_start_.num_nodes + goal_trees_[i].num_nodes;
+  ROS_INFO_STREAM("\nSummary:\n Totoal elapsed time: " << time_elapsed
+                  << " seconds \n Generated " << num_node_generated << " nodes \n");
+
+  //        if (visualize_path_)
+  //        {
+  //          EigenSTL::vector_Affine3d path_pts;
+  //          for (int i = 0; i < solution_path_configs_.size(); i++)
+  //          {
+  //            state_.setVariablePositions(wb_joint_names_, solution_path_configs_[i]);
+  //            Eigen::Affine3d eef_pose = state_.getGlobalLinkTransform(eef_name_);
+
+  //            rviz_visual_tools_->publishSphere(eef_pose, rviz_visual_tools::ORANGE, rviz_visual_tools::MEDIUM);
+  //            rviz_visual_tools_->trigger();
+
+  //            path_pts.push_back(eef_pose);
+  //          }
+
+  //          rviz_visual_tools_->publishPath(path_pts, rviz_visual_tools::YELLOW, rviz_visual_tools::MEDIUM);
+  //          rviz_visual_tools_->trigger();
+  //        }
 
   resetTrees();
 
@@ -1613,6 +1670,7 @@ bool MultiGoalRRTPlanner::setStartGoalConfigs(std::vector<double> start_config ,
 
   tree_start_.nodes.push_back(start);
   tree_start_.num_nodes = 1;
+  tree_start_.is_complete = false;
 
   int num_goal = goal_configs.size();
   goal_trees_.resize(num_goal);
@@ -1631,6 +1689,7 @@ bool MultiGoalRRTPlanner::setStartGoalConfigs(std::vector<double> start_config ,
     goal_trees_[i].id = i;
     goal_trees_[i].nodes.push_back(goal);
     goal_trees_[i].num_nodes = 1;
+    goal_trees_[i].is_complete = false;
   }
 
   return true;

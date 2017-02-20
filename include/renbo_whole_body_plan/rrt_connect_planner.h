@@ -49,6 +49,7 @@ struct tree
   int id;
   std::vector<node> nodes;
   int num_nodes;
+  bool is_complete;
 };
 
 enum status{ADVANCED, REACHED, TRAPPED};
