@@ -59,7 +59,7 @@ RRTConnectPlanner::RRTConnectPlanner(std::string group_name, std::string databas
 
 RRTConnectPlanner::~RRTConnectPlanner()
 {
-  robot_state_publisher_.shutdown();
+
 }
 
 moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, double max_step_size)
@@ -118,6 +118,7 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
 
         if (path_found == REACHED)
         {
+          end_time = ros::Time::now();
           if (verbose_)
           {
             ROS_INFO("Path found, tree_goal is connect to tree_start");
@@ -134,17 +135,16 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
               state_.setVariablePositions(wb_joint_names_, solution_path_configs_[i]);
               Eigen::Affine3d eef_pose = state_.getGlobalLinkTransform(eef_name_);
 
-              rviz_visual_tools_->publishSphere(eef_pose, rviz_visual_tools::ORANGE, rviz_visual_tools::MEDIUM);
+//              rviz_visual_tools_->publishSphere(eef_pose, rviz_visual_tools::ORANGE, rviz_visual_tools::MEDIUM);
 //              rviz_visual_tools_->trigger();
 
               path_pts.push_back(eef_pose);
             }
 
-            rviz_visual_tools_->publishPath(path_pts, rviz_visual_tools::YELLOW, rviz_visual_tools::MEDIUM);
-            rviz_visual_tools_->trigger();
+//            rviz_visual_tools_->publishPath(path_pts, rviz_visual_tools::YELLOW, rviz_visual_tools::MEDIUM);
+//            rviz_visual_tools_->trigger();
           }
 
-          end_time = ros::Time::now();
           dura =  end_time - start_time;
           num_node_generated =  tree_start_.num_nodes + tree_goal_.num_nodes;
 
@@ -179,6 +179,7 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
 
         if (path_found == REACHED)
         {
+          end_time = ros::Time::now();
           ROS_INFO("Path found, tree_start is connect to tree_goal");
 
           writePath(tree_start_, tree_goal_, q_near, 2, sln_traj, solution_file_path_);
@@ -192,17 +193,16 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
               state_.setVariablePositions(wb_joint_names_, solution_path_configs_[i]);
               Eigen::Affine3d eef_pose = state_.getGlobalLinkTransform(eef_name_);
 
-              rviz_visual_tools_->publishSphere(eef_pose, rviz_visual_tools::ORANGE, rviz_visual_tools::MEDIUM);
+//              rviz_visual_tools_->publishSphere(eef_pose, rviz_visual_tools::ORANGE, rviz_visual_tools::MEDIUM);
 //              rviz_visual_tools_->trigger();
 
               path_pts.push_back(eef_pose);
             }
 
-            rviz_visual_tools_->publishPath(path_pts, rviz_visual_tools::YELLOW, rviz_visual_tools::MEDIUM);
-            rviz_visual_tools_->trigger();
+//            rviz_visual_tools_->publishPath(path_pts, rviz_visual_tools::YELLOW, rviz_visual_tools::MEDIUM);
+//            rviz_visual_tools_->trigger();
           }
 
-          end_time = ros::Time::now();
           dura =  end_time - start_time;
           num_node_generated =  tree_start_.num_nodes + tree_goal_.num_nodes;
 
@@ -592,7 +592,7 @@ void RRTConnectPlanner::writePath(tree T_start, tree T_goal, node q_near,
                                   int connector, moveit_msgs::DisplayTrajectory &disp_trajectory_msgs,
                                   std::string solution_file_path)
 {
-  ROS_INFO_STREAM("Write path to trajectory file");
+  ROS_INFO_STREAM("post-processing");
 
   std::vector< std::vector<double> > start_path;
   std::vector< std::vector<double> > goal_path;
@@ -631,25 +631,30 @@ void RRTConnectPlanner::writePath(tree T_start, tree T_goal, node q_near,
 
   goal_path.push_back(T_goal.nodes[index_goal].config);
 
+  ROS_INFO("11");
+  trajectory solution_path_configs;
   solution_path_configs_.clear();
   for (int i = (start_path.size()-1); i >= 0; i--)
   {
-    solution_path_configs_.push_back(start_path[i]);
+    solution_path_configs.push_back(start_path[i]);
   }
 
   for (unsigned int i = 0; i < goal_path.size(); i++)
   {
-    solution_path_configs_.push_back(goal_path[i]);
+    solution_path_configs.push_back(goal_path[i]);
   }
+  ROS_INFO("2");
 
-  ROS_INFO_STREAM("Doing path short cutting...");
+  solution_path_configs_ = solution_path_configs;
+
+  ROS_INFO_STREAM("Doing path shortcutting...");
 
   /******************* PATH SHORTCUTTER *******************/
   trajectory shortcutted_path;
   int num_intermediate_waypoints_approach = 100;
 
   bool shorcut_flag = false;
-  shorcut_flag = pathShortCutter(solution_path_configs_, shortcutted_path, num_intermediate_waypoints_approach);
+  shorcut_flag = pathShortCutter(solution_path_configs, shortcutted_path, num_intermediate_waypoints_approach);
 
   if (shorcut_flag)
   {
@@ -1526,7 +1531,7 @@ MultiGoalRRTPlanner::MultiGoalRRTPlanner(std::string group_name, std::string dat
 
 }
 
-moveit_msgs::DisplayTrajectory MultiGoalRRTPlanner::solve(double time_out, double step_size)
+std::vector<moveit_msgs::DisplayTrajectory> MultiGoalRRTPlanner::solve(double time_out, double step_size)
 {
   rviz_visual_tools_->deleteAllMarkers();
   rviz_visual_tools_->trigger();
@@ -1542,7 +1547,7 @@ moveit_msgs::DisplayTrajectory MultiGoalRRTPlanner::solve(double time_out, doubl
   state_.setToDefaultValues();
   state_.update();
 
-  moveit_msgs::DisplayTrajectory sln_traj;
+  std::vector<moveit_msgs::DisplayTrajectory> sln_traj(goal_trees_.size());
 
   if (!loadDSDatabase(database_path_))
   {
@@ -1552,9 +1557,16 @@ moveit_msgs::DisplayTrajectory MultiGoalRRTPlanner::solve(double time_out, doubl
   ros::Duration(1.0).sleep();
 
   ros::Time start_time = ros::Time::now();
-  ros::Time finish_time;
+  std::vector<ros::Time> finish_time;
   bool swap = false;
-  node q_b_near_final;
+  int tree_complete_count = 0;
+  std::vector<node> q_b_near_final;
+
+  for (int i = 0; i < goal_trees_.size(); i++)
+  {
+    goal_trees_[i].is_complete = false;
+  }
+
   ROS_INFO("Multi-Goal RRT planner: start iteration");
 
   while((ros::Time::now()-start_time).sec < time_out)
@@ -1562,27 +1574,36 @@ moveit_msgs::DisplayTrajectory MultiGoalRRTPlanner::solve(double time_out, doubl
     node q_rand = getRandomStableConfig();
     if (!swap)
     {
+      node q_a_near = findNearestNeighbour(tree_start_, q_rand);
+      status rrt_status = extendTree(tree_start_, q_rand, q_a_near, robot_state_);
       for (int i = 0; i < goal_trees_.size(); i++)
       {
         if (goal_trees_[i].is_complete)
         {
           continue;
         }
-        node q_a_near = findNearestNeighbour(tree_start_, q_rand);
-        status rrt_status = extendTree(tree_start_, q_rand, q_a_near, robot_state_);
         node q_b_near = findNearestNeighbour(goal_trees_[i], tree_start_.nodes.back());
         rrt_status = connectTree(goal_trees_[i], tree_start_.nodes.back(), q_b_near, robot_state_);
+
         if (q_b_near.config == q_a_near.config)
         {
           goal_trees_[i].is_complete = true;
-          finish_time = ros::Time::now();
-          q_b_near_final = q_b_near;
-          break;
+          tree_complete_count++;
+          q_b_near_final.push_back(q_b_near);
+          finish_time.push_back(ros::Time::now());
         }
-        else
-        {
-          swap = true;
-        }
+
+        ROS_INFO_STREAM("solved tree " << i << " initial to goal");
+      }
+
+      if (tree_complete_count == goal_trees_.size())
+      {
+        //finish_time = ros::Time::now();
+        break;
+      }
+      else
+      {
+        swap = true;
       }
     }
     else
@@ -1597,60 +1618,86 @@ moveit_msgs::DisplayTrajectory MultiGoalRRTPlanner::solve(double time_out, doubl
         status rrt_status = extendTree(goal_trees_[i], q_rand, q_a_near, robot_state_);
         node q_b_near = findNearestNeighbour(tree_start_, goal_trees_[i].nodes.back());
         rrt_status = connectTree(tree_start_, goal_trees_[i].nodes.back(), q_b_near, robot_state_);
+
         if (q_b_near.config == q_a_near.config)
         {
           goal_trees_[i].is_complete = true;
-          finish_time = ros::Time::now();
-          q_b_near_final = q_b_near;
-          break;
+          tree_complete_count++;
+          q_b_near_final.push_back(q_b_near);
+          finish_time.push_back(ros::Time::now());
         }
-        else
-        {
-          swap = false;
-        }
+
+        ROS_INFO_STREAM("solved tree " << i << " goal to initial");
       }
 
+      if (tree_complete_count == goal_trees_.size())
+      {
+        //finish_time = ros::Time::now();
+        break;
+      }
+      else
+      {
+        swap = false;
+      }
     }
   }
 
-//  ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_CYAN << "q_a_near reached q_b_near");
-//  if (tree_start_.id == 0)
-//  {
-//    writePath(tree_start_, goal_trees_[i], q_b_near_final, 1, sln_traj, solution_file_path_);
-//  }
-//  else
-//  {
-//    writePath(tree_start_, goal_trees_[i], q_b_near_final, 2, sln_traj, solution_file_path_);
-//  }
+  ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_CYAN << "finish planning");
+  for (int i = 0; i < goal_trees_.size(); i++)
+  {
+//    ROS_INFO("1");
+//    writePath(tree_start_, goal_trees_[i], q_b_near_final[i], 1, sln_traj[i], solution_file_path_);
+//    ROS_INFO("2");
+    ros::Duration time_elapsed = finish_time[i]-start_time;
+    if (visualize_path_)
+    {
+      EigenSTL::vector_Affine3d path_pts;
+      for (int i = 0; i < solution_path_configs_.size(); i++)
+      {
+        state_.setVariablePositions(wb_joint_names_, solution_path_configs_[i]);
+        Eigen::Affine3d eef_pose = state_.getGlobalLinkTransform(eef_name_);
+        path_pts.push_back(eef_pose);
 
-  ros::Duration time_elapsed = finish_time - start_time;
-  int num_node_generated =  tree_start_.num_nodes + goal_trees_[i].num_nodes;
-  ROS_INFO_STREAM("\nSummary:\n Totoal elapsed time: " << time_elapsed
-                  << " seconds \n Generated " << num_node_generated << " nodes \n");
+        rviz_visual_tools_->publishSphere(eef_pose, rviz_visual_tools::ORANGE, rviz_visual_tools::MEDIUM);
+        rviz_visual_tools_->trigger();
+      }
 
-  //        if (visualize_path_)
-  //        {
-  //          EigenSTL::vector_Affine3d path_pts;
-  //          for (int i = 0; i < solution_path_configs_.size(); i++)
-  //          {
-  //            state_.setVariablePositions(wb_joint_names_, solution_path_configs_[i]);
-  //            Eigen::Affine3d eef_pose = state_.getGlobalLinkTransform(eef_name_);
+      rviz_visual_tools_->publishPath(path_pts, rviz_visual_tools::YELLOW, rviz_visual_tools::MEDIUM);
+      rviz_visual_tools_->trigger();
+      ros::Duration(0.5);
+    }
 
-  //            rviz_visual_tools_->publishSphere(eef_pose, rviz_visual_tools::ORANGE, rviz_visual_tools::MEDIUM);
-  //            rviz_visual_tools_->trigger();
+    ROS_INFO_STREAM("time elapsed for the node " << i << " cost " << time_elapsed << " sec");
+  }
 
-  //            path_pts.push_back(eef_pose);
-  //          }
+//  ROS_INFO_STREAM("\nSummary:\n time elapsed for the first node: " << time_elapsed[0] << " sec");
 
-  //          rviz_visual_tools_->publishPath(path_pts, rviz_visual_tools::YELLOW, rviz_visual_tools::MEDIUM);
-  //          rviz_visual_tools_->trigger();
-  //        }
-
-  resetTrees();
-
-  ROS_ERROR("No solution path found");
+  resetMultiTrees();
 
   return sln_traj;
+}
+
+double MultiGoalRRTPlanner::computePathLength(trajectory path)
+{
+  robot_state::RobotState robot_state_ = ps_->getCurrentStateNonConst();
+  robot_state_.setToDefaultValues();
+  robot_state_.update();
+
+  double path_lengh = 0.0;
+  for (int i = 0; i < path.size()-1; i++)
+  {
+    robot_state_.setVariablePositions(wb_joint_names_, path[i]);
+    Eigen::Affine3d eef_pose_first = robot_state_.getGlobalLinkTransform(eef_name_);
+
+    robot_state_.setVariablePositions(wb_joint_names_, path[i+1]);
+    Eigen::Affine3d eef_pose_second = robot_state_.getGlobalLinkTransform(eef_name_);
+
+    path_lengh += std::sqrt((eef_pose_second.translation().x()-eef_pose_first.translation().x())*(eef_pose_second.translation().x()-eef_pose_first.translation().x()))+
+        std::sqrt((eef_pose_second.translation().y()-eef_pose_first.translation().y())*(eef_pose_second.translation().y()-eef_pose_first.translation().y()))+
+        std::sqrt((eef_pose_second.translation().z()-eef_pose_first.translation().z())*(eef_pose_second.translation().z()-eef_pose_first.translation().z()));
+  }
+
+  return path_lengh;
 
 }
 
@@ -1693,6 +1740,20 @@ bool MultiGoalRRTPlanner::setStartGoalConfigs(std::vector<double> start_config ,
   }
 
   return true;
+}
+
+void MultiGoalRRTPlanner::resetMultiTrees()
+{
+  tree_start_.nodes.clear();
+  tree_start_.num_nodes = 0;
+
+  for (int i = 0; i < goal_trees_.size(); i++)
+  {
+    goal_trees_[i].id = 0;
+    goal_trees_[i].nodes.clear();
+    goal_trees_[i].num_nodes = 0;
+    goal_trees_[i].is_complete = false;
+  }
 }
 
 }

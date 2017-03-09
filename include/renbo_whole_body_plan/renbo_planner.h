@@ -20,6 +20,9 @@
 #include <rrt_planner_msgs/RRT_Planner_Test.h>
 #include <rrt_planner_msgs/Final_Pose_Planning.h>
 
+#include <renbo_msgs/compute_motion_plan.h>
+#include <renbo_msgs/generate_whole_body_posture.h>
+
 #include <renbo_whole_body_plan/stable_config_generator.h>
 #include <renbo_whole_body_plan/rrt_connect_planner.h>
 #include <renbo_whole_body_plan/final_pose_planner.h>
@@ -51,6 +54,10 @@ public:
 
   bool pick_place_motion_plan(rrt_planner_msgs::compute_motion_plan::Request &req, rrt_planner_msgs::compute_motion_plan::Response &res);
 
+  bool generate_whole_body_posture(renbo_msgs::generate_whole_body_posture::Request &req, renbo_msgs::generate_whole_body_posture::Response &res);
+
+  bool BiRRT_motion_plan(renbo_msgs::compute_motion_plan::Request &req, renbo_msgs::compute_motion_plan::Response &res);
+
   bool multi_goal_rrt_planner(rrt_planner_msgs::compute_motion_plan::Request &req, rrt_planner_msgs::compute_motion_plan::Response &res);
 
 private:
@@ -58,6 +65,8 @@ private:
   moveit_msgs::CollisionObject loadMeshFromSource(const std::string file_name, const geometry_msgs::Pose &pose);
 
   void loadCollisionEnvironment(int type);
+
+  bool checkCollision(const robot_state::RobotState& state);
 
   bool checkCollision(const planning_scene::PlanningScenePtr ps_);
 

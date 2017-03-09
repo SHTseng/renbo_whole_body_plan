@@ -335,6 +335,41 @@ bool RenboPlanner::final_pose_planning(rrt_planner_msgs::Final_Pose_Planning::Re
   return true;
 }
 
+bool RenboPlanner::generate_whole_body_posture(renbo_msgs::generate_whole_body_posture::Request &req,
+                                               renbo_msgs::generate_whole_body_posture::Response &res)
+{
+  scenario_ = req.scenario;
+
+  robot_state::RobotState robot_state_ = psm_->getPlanningScene()->getCurrentStateNonConst();
+  robot_state_.setToDefaultValues();
+  robot_state_.update();
+
+  eef_original_config_ = robot_state_.getGlobalLinkTransform(eef_name_);
+  waist_original_config_ = robot_state_.getGlobalLinkTransform(waist_name_);
+
+  Eigen::Affine3d eef_pick_pose, eef_place_pose, waist_pick_pose, waist_place_pose;
+  if (!updatePickPlacePose(scenario_, eef_pick_pose, eef_place_pose, waist_pick_pose, waist_place_pose))
+  {
+    ROS_INFO_STREAM("Can't update picking and placing poses");
+    return false;
+  }
+
+  std::vector<double> whole_body_config(wb_jmg_->getVariableCount());
+  bool final_pose_flag = fpp_->solveFinalPose(robot_state_, eef_pick_pose, waist_pick_pose, whole_body_config);
+  if (!final_pose_flag)
+  {
+    ROS_ERROR("solve whole-body posture fail");
+    res.success = 0;
+    return false;
+  }
+
+  res.success = 1;
+  robot_state_.copyJointGroupPositions(PLANNING_GROUP, res.solved_config);
+  ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "solved whole-body posture");
+
+  return true;
+}
+
 bool RenboPlanner::pick_place_motion_plan(rrt_planner_msgs::compute_motion_plan::Request &req, rrt_planner_msgs::compute_motion_plan::Response &res)
 {
   scenario_ = req.scenerio;
@@ -391,8 +426,9 @@ bool RenboPlanner::pick_place_motion_plan(rrt_planner_msgs::compute_motion_plan:
 
   Eigen::Affine3d grasp_object_pose;
   grasp_object_pose = robot_state_.getGlobalLinkTransform(eef_name_);
-  Eigen::Vector3d transformed_translation = grasp_object_pose.rotation() * Eigen::Vector3d(-0.16, 0.0, 0.0);
   grasp_object_pose.rotate(Eigen::AngleAxisd(M_PI/2, Eigen::Vector3d::UnitY()));
+  Eigen::Vector3d transformed_translation = grasp_object_pose.rotation() * Eigen::Vector3d(0.0, -0.16, 0.0);
+
 
 //  grasp_object_pose.rotate(Eigen::AngleAxisd(-M_PI/2, Eigen::Vector3d::UnitX()));
 //  Eigen::Vector3d transformed_translation = grasp_object_pose.rotation() * Eigen::Vector3d(0.0, 0.0, -0.22);
@@ -419,8 +455,6 @@ bool RenboPlanner::pick_place_motion_plan(rrt_planner_msgs::compute_motion_plan:
   collision_target_object.operation = moveit_msgs::CollisionObject::ADD;
 
   addPSMCollisionObject(collision_target_object, getColor(169.0, 169.0, 169.0, 1.0));
-  ROS_INFO_STREAM("Add target collision object to scene");
-
 
   //  Check robot state collision
   bool collision_free = checkCollision(psm_->getPlanningScene());
@@ -437,8 +471,10 @@ bool RenboPlanner::pick_place_motion_plan(rrt_planner_msgs::compute_motion_plan:
 
   rrt_->updateEnvironment(psm_->getPlanningScene());
   rrt_->setStartGoalConfigs(initial_configuration, pick_config);
+//  rrt_->setStartGoalConfigs(pick_config, place_config);
 
-  moveit_msgs::DisplayTrajectory display_trajectory_ = rrt_->solveQuery(20000, 0.1);
+
+  moveit_msgs::DisplayTrajectory display_trajectory_ = rrt_->solveQuery(20000, 0.08);
   init_pick_trajectory_pub_.publish(display_trajectory_);
 
   ros::Duration(2.0).sleep();
@@ -467,6 +503,40 @@ bool RenboPlanner::pick_place_motion_plan(rrt_planner_msgs::compute_motion_plan:
   return true;
 }
 
+bool RenboPlanner::BiRRT_motion_plan(renbo_msgs::compute_motion_plan::Request &req,
+                                     renbo_msgs::compute_motion_plan::Response &res)
+{
+  loadCollisionEnvironment(req.scenario);
+
+  robot_state::RobotState initial_state = psm_->getPlanningScene()->getCurrentStateNonConst();
+  initial_state.setVariablePositions(wb_joint_names_, req.initial_config);
+  initial_state.update();
+
+  robot_state::RobotState goal_state = psm_->getPlanningScene()->getCurrentStateNonConst();
+  goal_state.setVariablePositions(wb_joint_names_, req.goal_config);
+  goal_state.update();
+
+  if (!checkCollision(initial_state) || !checkCollision(goal_state))
+  {
+    ROS_ERROR("start config or goal config is in collision");
+    res.success = 0;
+    return false;
+  }
+
+  rrt_->updateEnvironment(psm_->getPlanningScene());
+  rrt_->setStartGoalConfigs(req.initial_config, req.goal_config);
+
+  moveit_msgs::DisplayTrajectory display_trajectory = rrt_->solveQuery(20000, 0.1);
+  init_pick_trajectory_pub_.publish(display_trajectory);
+
+//  ros::Duration(0.5).sleep();
+
+  res.whole_body_trajectory = display_trajectory;
+
+  res.success = 1;
+  return res.success;
+}
+
 bool RenboPlanner::multi_goal_rrt_planner(rrt_planner_msgs::compute_motion_plan::Request &req,
                                           rrt_planner_msgs::compute_motion_plan::Response &res)
 {
@@ -492,7 +562,7 @@ bool RenboPlanner::multi_goal_rrt_planner(rrt_planner_msgs::compute_motion_plan:
 
   fpp_->updateScene(psm_->getPlanningScene());
 
-  ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "Multi-Goal RRT planner: Start pick planning");
+  ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "Multi-Goal RRT planner: start planning");
 
   std::vector<double> pick_config(wb_jmg_->getVariableCount());
   bool final_pose_flag = fpp_->solveFinalPose(robot_state_, eef_pick_pose, waist_pick_pose, pick_config);
@@ -510,7 +580,7 @@ bool RenboPlanner::multi_goal_rrt_planner(rrt_planner_msgs::compute_motion_plan:
     return false;
   }
 
-  ROS_INFO_STREAM("Solved pick pose");
+  ROS_INFO_STREAM("Solved pick and place pose");
 
   robot_state_.setVariablePositions(wb_jmg_->getJointModelNames(), pick_config);
   robot_state_.update();
@@ -521,41 +591,41 @@ bool RenboPlanner::multi_goal_rrt_planner(rrt_planner_msgs::compute_motion_plan:
   robot_state::robotStateToRobotStateMsg(robot_state_, robot_state_msg_.state);
   goal_state_pub_.publish(robot_state_msg_);
 
-//  Eigen::Affine3d grasp_object_pose;
-//  grasp_object_pose = robot_state_.getGlobalLinkTransform(eef_name_);
-//  Eigen::Vector3d transformed_translation = grasp_object_pose.rotation() * Eigen::Vector3d(-0.16, 0.0, 0.0);
-//  grasp_object_pose.rotate(Eigen::AngleAxisd(M_PI/2, Eigen::Vector3d::UnitY()));
-//  grasp_object_pose.translation() += transformed_translation;
+  Eigen::Affine3d grasp_object_pose;
+  grasp_object_pose = robot_state_.getGlobalLinkTransform(eef_name_);
+  Eigen::Vector3d transformed_translation = grasp_object_pose.rotation() * Eigen::Vector3d(-0.16, 0.0, 0.0);
+  grasp_object_pose.rotate(Eigen::AngleAxisd(M_PI/2, Eigen::Vector3d::UnitY()));
+  grasp_object_pose.translation() += transformed_translation;
 
-//  shape_msgs::SolidPrimitive target_object;
-//  target_object.type = target_object.CYLINDER;
-//  target_object.dimensions.resize(2);
-//  target_object.dimensions[0] = 0.15;
-//  target_object.dimensions[1] = 0.025;
+  shape_msgs::SolidPrimitive target_object;
+  target_object.type = target_object.CYLINDER;
+  target_object.dimensions.resize(2);
+  target_object.dimensions[0] = 0.15;
+  target_object.dimensions[1] = 0.025;
 
-//  geometry_msgs::Pose pose;
-//  tf::poseEigenToMsg(grasp_object_pose, pose);
+  geometry_msgs::Pose pose;
+  tf::poseEigenToMsg(grasp_object_pose, pose);
 
-//  moveit_msgs::CollisionObject collision_target_object;
-//  collision_target_object.id = "cup";
-//  collision_target_object.header.frame_id = base_frame_;
-//  collision_target_object.primitives.push_back(target_object);
-//  collision_target_object.primitive_poses.push_back(pose);
-//  collision_target_object.operation = moveit_msgs::CollisionObject::ADD;
+  moveit_msgs::CollisionObject collision_target_object;
+  collision_target_object.id = "cup";
+  collision_target_object.header.frame_id = base_frame_;
+  collision_target_object.primitives.push_back(target_object);
+  collision_target_object.primitive_poses.push_back(pose);
+  collision_target_object.operation = moveit_msgs::CollisionObject::ADD;
 
-//  addPSMCollisionObject(collision_target_object, getColor(169.0, 169.0, 169.0, 1.0));
-//  ROS_INFO_STREAM("Add target collision object to scene");
+//  saddPSMCollisionObject(collision_target_object, getColor(169.0, 169.0, 169.0, 1.0));
+  ROS_INFO_STREAM("Add target collision object to scene");
 
-//  bool collision_free = checkCollision(psm_->getPlanningScene());
-//  if (!collision_free)
-//  {
-//    ROS_ERROR_STREAM("pick pose is in collision");
-//    return false;
-//  }
+  bool collision_free = checkCollision(psm_->getPlanningScene());
+  if (!collision_free)
+  {
+    ROS_ERROR_STREAM("pick pose is in collision");
+    return false;
+  }
 
   std::vector<double> initial_config(wb_jmg_->getVariableCount());
   std::vector< std::vector<double> > goal_configs;
-  goal_configs.resize(2);
+  goal_configs.resize(5);
 //  for (int i = 0; i < 5; i++)
 //  {
 //    goal_configs[i] = initial_config;
@@ -563,13 +633,20 @@ bool RenboPlanner::multi_goal_rrt_planner(rrt_planner_msgs::compute_motion_plan:
 
   goal_configs[0] = pick_config;
   goal_configs[1] = place_config;
+  goal_configs[2] = place_config;
+  goal_configs[3] = place_config;
+  goal_configs[4] = place_config;
 
   mg_rrt_->updateEnvironment(psm_->getPlanningScene());
   mg_rrt_ ->setStartGoalConfigs(initial_config, goal_configs);
 
-  moveit_msgs::DisplayTrajectory display_trajectory_ = mg_rrt_->solve(TIME_OUT, 0.1);
-  init_pick_trajectory_pub_.publish(display_trajectory_);
-  ros::Duration(1.0).sleep();
+  std::vector<moveit_msgs::DisplayTrajectory> display_trajectory_ = mg_rrt_->solve(TIME_OUT, 0.1);
+
+  init_pick_trajectory_pub_.publish(display_trajectory_[0]);
+  ros::Duration(0.5).sleep();
+
+  pick_place_trajectory_pub_.publish(display_trajectory_[1]);
+  ros::Duration(0.5).sleep();
 
   return true;
 }
@@ -679,24 +756,16 @@ void RenboPlanner::loadCollisionEnvironment(int type)
   }
   case 3:
   {
-    table_pose.position.x = 0.95;
-    table_pose.position.y = 0.125;
+    table_pose.position.x = 0.6;
+    table_pose.position.y = 0.0;
     table_pose.position.z = 0.0;
-    table_pose.orientation.w = 0.707;
+    table_pose.orientation.w = 0.0;
     table_pose.orientation.x = 0.0;
     table_pose.orientation.y = 0.0;
-    table_pose.orientation.z = -0.707;
+    table_pose.orientation.z = 1.0;
 
-    moveit_msgs::CollisionObject collision_mesh_closet = loadMeshFromSource("closet.stl", table_pose);
-
-    {
-      planning_scene_monitor::LockedPlanningSceneRW scene(psm_);
-      scene->getCurrentStateNonConst().update();
-      scene->processCollisionObjectMsg(collision_mesh_closet);
-      scene->setObjectColor("closet.stl", getColor(222.0, 184.0, 135.0, 1.0));
-
-      triggerPlanningSceneUpade();
-    }
+    moveit_msgs::CollisionObject collision_mesh_closet = loadMeshFromSource("closet_v3.stl", table_pose);
+    addPSMCollisionObject(collision_mesh_closet, getColor(222.0, 184.0, 135.0, 1.0));
 
     break;
   }
@@ -739,9 +808,34 @@ void RenboPlanner::loadCollisionEnvironment(int type)
     addPSMCollisionObject(collision_box, getColor(255.0, 255.0, 255.0, 1.0));
     break;
   }
+  case 9:
+  {
+    ROS_INFO("load empty space");
+    break;
+  }
 
   } // end switch
 
+}
+
+bool RenboPlanner::checkCollision(const robot_state::RobotState& state)
+{
+  collision_detection::CollisionRequest collision_req;
+  collision_detection::CollisionResult collision_res;
+
+  collision_req.group_name = PLANNING_GROUP;
+  collision_res.clear();
+
+  ps_->checkCollision(collision_req, collision_res, state);
+
+  if (collision_res.collision != 0)
+  {
+    return false;
+  }
+  else
+  {
+    return true;
+  }
 }
 
 bool RenboPlanner::checkCollision(const planning_scene::PlanningScenePtr ps_)
@@ -846,6 +940,10 @@ bool RenboPlanner::updatePickPlacePose(const int& scenerio, Eigen::Affine3d& pic
 
   case 4:
     file_name = package_path.append("/database/scene_4.dat");
+    break;
+
+  case 9:
+    file_name = package_path.append("/database/scene_9.dat");
     break;
   }
 

@@ -77,6 +77,8 @@ public:
 
   void setVerbose(bool verbose);
 
+  void getResult();
+
   bool TEST(int test_flag);
 
   bool is_grasped = false;
@@ -115,7 +117,9 @@ protected:
                  std::string solution_file_path);
 
   //Interpolate two waypoints of the raw solution path
-  moveit_msgs::DisplayTrajectory interpolateWaypoints(std::vector<double> waypoint_start,std::vector<double> waypoint_goal, int num_intermediate_waypoints);
+  moveit_msgs::DisplayTrajectory interpolateWaypoints(std::vector<double> waypoint_start,
+                                                      std::vector<double> waypoint_goal,
+                                                      int num_intermediate_waypoints);
 
   //Interpolate the waypoints of the shortcutted path
   void interpolateShortPathWaypoints(std::vector<std::vector<double> > short_path, std::vector<std::vector<double> > &interpolated_path, int num_intermediate_waypoints);
@@ -130,6 +134,8 @@ protected:
 
   //Generate a Trajectory from the array "path"
   void generateTrajectory(std::vector< std::vector<double> > path, int num_configs, moveit_msgs::DisplayTrajectory &disp_traj);
+
+  double computePathLength();
 
   void resetTrees();
 
@@ -216,9 +222,15 @@ public:
 
   bool setStartGoalConfigs(std::vector<double> start_config , std::vector< std::vector<double> > goal_configs);
 
-  moveit_msgs::DisplayTrajectory solve(double time_out, double step_size);
+  std::vector<moveit_msgs::DisplayTrajectory> solve(double time_out, double step_size);
 
 private:
+
+  double computePathLength(trajectory path);
+
+  void swapTrees(std::vector<tree> tree_a, std::vector<tree> tree_b);
+
+  void resetMultiTrees();
 
   std::vector<tree> goal_trees_;
 

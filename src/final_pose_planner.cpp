@@ -28,7 +28,7 @@ FinalPosePlanner::FinalPosePlanner():
 
   wb_num_joint_ = wb_joint_names_.size();
 
-  nlp_ik_solver_.reset(new NLPIKSolver());
+//  nlp_ik_solver_.reset(new NLPIKSolver());
 
   initilize();
 
@@ -288,7 +288,7 @@ bool FinalPosePlanner::TEST(const Eigen::Affine3d& eef_pose, std::map<std::strin
   bool rc = true;
 
   //std::vector<double> sln_pose;
-  nlp_ik_solver_->solve(eef_pose, jnt_pos_map);
+//  nlp_ik_solver_->solve(eef_pose, jnt_pos_map);
 
   return rc;
 
