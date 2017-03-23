@@ -19,6 +19,7 @@
   <build_depend>libpcl-all-dev</build_depend>
 
   <build_depend>rrt_planner_msgs</build_depend>
+  <build_depend>renbo_msgs</build_depend>
   <build_depend>graph_msgs</build_depend>
 
   <run_depend>hrl_kinematics</run_depend>
@@ -30,6 +31,7 @@
 
   <run_depend>renbo_moveit_config</run_depend>
   <run_depend>rrt_planner_msgs</run_depend>
+  <run_depend>renbo_msgs</run_depend>
   <run_depend>graph_msgs</run_depend>
 
   <run_depend>libpcl-all</run_depend>

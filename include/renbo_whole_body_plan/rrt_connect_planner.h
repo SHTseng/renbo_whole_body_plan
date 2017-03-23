@@ -177,8 +177,6 @@ protected:
 
   std::map<std::string, double> wb_jnt_pos_map_;
 
-  std::ifstream ds_config_file_;
-
   std::string database_path_;
 
   std::vector< std::vector<double> > ds_database_configs_;

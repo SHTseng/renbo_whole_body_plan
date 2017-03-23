@@ -20,6 +20,7 @@
 #include <rrt_planner_msgs/RRT_Planner_Test.h>
 #include <rrt_planner_msgs/Final_Pose_Planning.h>
 
+#include <renbo_msgs/generate_ss_config.h>
 #include <renbo_msgs/compute_motion_plan.h>
 #include <renbo_msgs/generate_whole_body_posture.h>
 
@@ -45,6 +46,8 @@ public:
   bool generate_ds_database(rrt_planner_msgs::Generate_DS_Configs::Request &req, rrt_planner_msgs::Generate_DS_Configs::Response &res);
 
   bool compute_robot_com(rrt_planner_msgs::Generate_DS_Configs::Request &req, rrt_planner_msgs::Generate_DS_Configs::Response &res);
+
+  bool generate_valid_config(renbo_msgs::generate_ss_config::Request &req, renbo_msgs::generate_ss_config::Response &res);
 
   bool sc_generator_test(rrt_planner_msgs::SC_Generator_Test::Request &req, rrt_planner_msgs::SC_Generator_Test::Response &res);
 

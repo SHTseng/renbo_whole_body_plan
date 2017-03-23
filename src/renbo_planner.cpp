@@ -39,8 +39,8 @@ RenboPlanner::RenboPlanner():
 
   wb_joint_names_ = wb_jmg_->getJointModelNames();
 
-//  scg_ = std::shared_ptr<renbo_constraint_sampler::StableConfigGenerator>
-//      (new renbo_constraint_sampler::StableConfigGenerator(PLANNING_GROUP, SCALE_SP));
+  scg_ = std::shared_ptr<renbo_constraint_sampler::StableConfigGenerator>
+      (new renbo_constraint_sampler::StableConfigGenerator(PLANNING_GROUP, SCALE_SP));
 
   fpp_.reset(new renbo_planner::FinalPosePlanner());
 
@@ -83,9 +83,6 @@ bool RenboPlanner::generate_ds_database(
     rrt_planner_msgs::Generate_DS_Configs::Request &req,
     rrt_planner_msgs::Generate_DS_Configs::Response &res)
 {
-  scg_ = std::shared_ptr<renbo_constraint_sampler::StableConfigGenerator>
-      (new renbo_constraint_sampler::StableConfigGenerator(PLANNING_GROUP, SCALE_SP));
-
   renbo_constraint_sampler::StableConfigGenerator::FootSupport support_mode = renbo_constraint_sampler::StableConfigGenerator::DOUBLE_SUPPORT;
 
   scg_->setVerbose(verbose_);
@@ -106,8 +103,6 @@ bool RenboPlanner::compute_robot_com(
     rrt_planner_msgs::Generate_DS_Configs::Request &req,
     rrt_planner_msgs::Generate_DS_Configs::Response &res)
 {
-  scg_ = std::shared_ptr<renbo_constraint_sampler::StableConfigGenerator>
-      (new renbo_constraint_sampler::StableConfigGenerator(PLANNING_GROUP, SCALE_SP));
 
   robot_state::RobotState state(ps_->getRobotModel());
   state.setToDefaultValues();
@@ -122,25 +117,20 @@ bool RenboPlanner::compute_robot_com(
   return true;
 }
 
-bool RenboPlanner::sc_generator_test(
-    rrt_planner_msgs::SC_Generator_Test::Request &req,
-    rrt_planner_msgs::SC_Generator_Test::Response &res)
+bool RenboPlanner::generate_valid_config(
+    renbo_msgs::generate_ss_config::Request &req,
+    renbo_msgs::generate_ss_config::Response &res)
 {
-  scg_ = std::shared_ptr<renbo_constraint_sampler::StableConfigGenerator>
-      (new renbo_constraint_sampler::StableConfigGenerator(PLANNING_GROUP, SCALE_SP));
-
-  scg_->setVerbose(verbose_);
-
-  if (!scg_->test())
+  if(!scg_->generateConfig())
   {
-    ROS_ERROR("Could not stable config generator test");
-    exit(1);
+    res.result = 0;
+    return true;
   }
 
-  res.result = 2;
-
+  res.result = 1;
   return true;
 }
+
 
 bool RenboPlanner::rrt_planner_test(rrt_planner_msgs::compute_motion_plan::Request &req, rrt_planner_msgs::compute_motion_plan::Response &res)
 {
@@ -309,27 +299,6 @@ bool RenboPlanner::final_pose_planning(rrt_planner_msgs::Final_Pose_Planning::Re
 
   ros::Duration(1.0).sleep();
 
-//  ROS_INFO_STREAM("Start Drake nlopt IK");
-
-//  std::map<std::string, double> jnt_pos_map;
-//  std::map<std::string, double> solved_jnt_pos_map;
-
-//  jnt_pos_map.clear();
-//  solved_jnt_pos_map.clear();
-
-//  fpp_->TEST(eef_pick_pose, jnt_pos_map);
-
-//  solved_jnt_pos_map.clear();
-//  for (int i = 0; i < wb_joint_names_.size(); i++)
-//  {
-//    solved_jnt_pos_map.insert(std::pair<std::string, double>(wb_joint_names_[i], jnt_pos_map[wb_joint_names_[i]]));
-//  }
-
-//  robot_state_.setVariablePositions(solved_jnt_pos_map);
-//  robot_state_.update();
-
-//  ROS_INFO_STREAM("Test drake complete");
-
   res.success = true;
 
   return true;
@@ -454,7 +423,7 @@ bool RenboPlanner::pick_place_motion_plan(rrt_planner_msgs::compute_motion_plan:
   collision_target_object.primitive_poses.push_back(pose);
   collision_target_object.operation = moveit_msgs::CollisionObject::ADD;
 
-  addPSMCollisionObject(collision_target_object, getColor(169.0, 169.0, 169.0, 1.0));
+//  addPSMCollisionObject(collision_target_object, getColor(169.0, 169.0, 169.0, 1.0));
 
   //  Check robot state collision
   bool collision_free = checkCollision(psm_->getPlanningScene());
@@ -533,7 +502,7 @@ bool RenboPlanner::BiRRT_motion_plan(renbo_msgs::compute_motion_plan::Request &r
 
   res.whole_body_trajectory = display_trajectory;
 
-  res.success = 1;
+  res.success = true;
   return res.success;
 }
 
@@ -656,21 +625,71 @@ void RenboPlanner::loadCollisionEnvironment(int type)
   geometry_msgs::Pose table_pose;
   geometry_msgs::Pose pose;
 
+  std::string package_path = package_path_;
+  std::ifstream environment_description;
+
   switch(type)
   {
   case 0:
   {
-    table_pose.position.x = 0.6;
-    table_pose.position.y = 0.125;
-    table_pose.position.z = 0.0;
-    table_pose.orientation.w = 1.0;
-    table_pose.orientation.x = 0.0;
-    table_pose.orientation.y = 0.0;
-    table_pose.orientation.z = 0.0;
+    package_path = package_path.append("/database/env_0.dat");
+    environment_description.open(package_path.c_str());
+
+    std::vector<double> temp_poses;
+    double temp = 0.0;
+    while (environment_description >> temp)
+    {
+      temp_poses.push_back(temp);
+    }
+    environment_description.close();
+
+    table_pose.position.x = temp_poses[0];
+    table_pose.position.y = temp_poses[1];
+    table_pose.position.z = temp_poses[2];
+    table_pose.orientation.w = temp_poses[3];
+    table_pose.orientation.x = temp_poses[4];
+    table_pose.orientation.y = temp_poses[5];
+    table_pose.orientation.z = temp_poses[6];
 
     moveit_msgs::CollisionObject collision_mesh_table = loadMeshFromSource("ikea_table.stl", table_pose);
-
     addPSMCollisionObject(collision_mesh_table, getColor(222.0, 184.0, 135.0, 1.0));
+
+    geometry_msgs::Pose mug_pose;
+    mug_pose.position.x = temp_poses[7];
+    mug_pose.position.y = temp_poses[8];
+    mug_pose.position.z = temp_poses[9];
+    mug_pose.orientation.w = temp_poses[10];
+    mug_pose.orientation.x = temp_poses[11];
+    mug_pose.orientation.y = temp_poses[12];
+    mug_pose.orientation.z = temp_poses[13];
+
+    moveit_msgs::CollisionObject collision_mesh_mug = loadMeshFromSource("mug.stl", mug_pose);
+    addPSMCollisionObject(collision_mesh_mug, getColor(255.0, 255.0, 255.0, 1.0));
+
+    geometry_msgs::Pose box_pose;
+    shape_msgs::SolidPrimitive box;
+    box.type = box.BOX;
+    box.dimensions.resize(3);
+    box.dimensions[0] = 0.345;
+    box.dimensions[1] = 0.165;
+    box.dimensions[2] = 0.165;
+
+    box_pose.position.x = temp_poses[14];
+    box_pose.position.y = temp_poses[15];
+    box_pose.position.z = temp_poses[16];
+    box_pose.orientation.w = temp_poses[17];
+    box_pose.orientation.x = temp_poses[18];
+    box_pose.orientation.y = temp_poses[19];
+    box_pose.orientation.z = temp_poses[20];
+
+    moveit_msgs::CollisionObject collision_box;
+    collision_box.id = "box";
+    collision_box.header.frame_id = "r_sole";
+    collision_box.primitives.push_back(box);
+    collision_box.primitive_poses.push_back(box_pose);
+    collision_box.operation = collision_box.ADD;
+
+    addPSMCollisionObject(collision_box, getColor(255.0, 255.0, 255.0, 1.0));
 
     break;
   }
@@ -968,6 +987,10 @@ bool RenboPlanner::updatePickPlacePose(const int& scenerio, Eigen::Affine3d& pic
   pick_pose.translation().z() = config_[2];
 
   pick_pose.linear() = eef_original_config_.linear();
+
+//  Eigen::Matrix3d rot_a = eef_original_config_.linear();
+//  Eigen::Vector3d eular_a = rot_a.eulerAngles(0, 1, 2);
+//  ROS_INFO_STREAM(eular_a(0) << " " << eular_a(1) << " " << eular_a(2));
 
   Eigen::Matrix3d rotation_;
   rotation_ = Eigen::AngleAxisd(config_[3], Eigen::Vector3d::UnitX())*

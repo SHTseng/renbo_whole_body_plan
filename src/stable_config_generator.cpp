@@ -30,6 +30,8 @@ StableConfigGenerator::StableConfigGenerator(const std::string &group_name, doub
 
   robot_state_publisher_ = nh_.advertise<moveit_msgs::DisplayRobotState>("renbo_robot_state", 1);
 
+  goal_state_publisher_ = nh_.advertise<moveit_msgs::DisplayRobotState>("goal_state", 1);
+
   visualization_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("stability_visualization", 1);
 
   support_polygon_pub_ = nh_.advertise<geometry_msgs::PolygonStamped>("support_polygon", 10);
@@ -237,6 +239,77 @@ bool StableConfigGenerator::computeRobotCoM(const robot_state::RobotState& state
 
   return true;
 
+}
+
+bool StableConfigGenerator::generateConfig()
+{
+  robot_state::RobotState robot_state_ = getRandConfig();
+
+  moveit_msgs::DisplayRobotState robot_state_msg_;
+  robot_state::robotStateToRobotStateMsg(robot_state_, robot_state_msg_.state);
+
+  robot_state::robotStateToRobotStateMsg(robot_state_, robot_state_msg_.state);
+  robot_state_publisher_.publish(robot_state_msg_);
+
+  bool generate_config = ds_constraint_kin_.enforceDSLeftLeg(robot_state_, l_leg_jmg_);
+  if(!generate_config)
+  {
+    ROS_WARN("stable_config_generator: unable to enforce double support");
+    return generate_config;
+  }
+
+  generate_config = isFeasible(robot_state_);
+  if (!generate_config)
+  {
+    ROS_WARN("stable_config_generator: random config is unfeasible");
+    return generate_config;
+  }
+
+  robot_state_.copyJointGroupPositions(whole_body_jmg_, whole_body_joint_values_);
+  robot_state_.update();
+
+  robot_state::robotStateToRobotStateMsg(robot_state_, robot_state_msg_.state);
+  geometry_msgs::PolygonStamped foot_polygon = getSupportPolygon();
+  visualization_msgs::Marker com_marker = getCOMMarker();
+  visualization_msgs::Marker p_com_marker = getPorjectedCOMMarker();
+
+  goal_state_publisher_.publish(robot_state_msg_);
+  support_polygon_pub_.publish(foot_polygon);
+  pcom_pub_.publish(p_com_marker);
+  com_pub_.publish(com_marker);
+
+  return generate_config;
+}
+
+
+
+robot_state::RobotState StableConfigGenerator::getRandConfig()
+{
+  robot_state::RobotState robot_state_(ps_->getRobotModel());
+  robot_state_.setToDefaultValues();
+
+  std::vector<double> rand_config_value;
+  whole_body_jmg_->getVariableRandomPositions(rng_, rand_config_value);
+  wb_jnt_pos_map_.clear();
+
+  for (int i = 0; i < whole_body_joint_names_.size(); i++)
+  {
+    wb_jnt_pos_map_.insert(std::pair<std::string, double>(whole_body_joint_names_[i], rand_config_value[i]));
+  }
+
+  wb_jnt_pos_map_["head_yaw_joint"] = 0.0;
+  wb_jnt_pos_map_["head_pitch_joint"] = 0.0;
+  wb_jnt_pos_map_["l_shoulder_pitch_joint"] = -0.785;
+  wb_jnt_pos_map_["l_shoulder_roll_joint"] = 0.0;
+  wb_jnt_pos_map_["l_shoulder_yaw_joint"] = 0.0;
+  wb_jnt_pos_map_["l_elbow_joint"] = 1.0472;
+  wb_jnt_pos_map_["l_wrist_yaw_joint"] = 0.0;
+  wb_jnt_pos_map_["l_wrist_pitch_joint"] = -0.523;
+
+  robot_state_.setVariablePositions(wb_jnt_pos_map_);
+  robot_state_.update();
+
+  return robot_state_;
 }
 
 bool StableConfigGenerator::isFeasible(const robot_state::RobotState& robot_state)

@@ -3,19 +3,11 @@ project(renbo_whole_body_plan)
 
 add_compile_options(-std=c++11)
 
-if(APPLE)
-  set(DRAKE_PATH "$ENV{HOME}/drake-distro/build/install")
-endif()
-
-if(UNIX AND NOT APPLE)
-  set(DRAKE_PATH "$ENV{HOME}/drake_catkin_ws/install")
-endif()
-
-
 find_package(catkin REQUIRED COMPONENTS
   hrl_kinematics
   moveit_core
   rrt_planner_msgs
+  renbo_msgs
   moveit_visual_tools
   rviz_visual_tools
   trac_ik_lib
@@ -36,6 +28,7 @@ catkin_package(
     moveit_visual_tools
     rviz_visual_tools
     rrt_planner_msgs
+    renbo_msgs
     trac_ik_lib
 )
 
@@ -45,12 +38,10 @@ include_directories(
     ${catkin_INCLUDE_DIRS}
     ${PCL_INCLUDE_DIRS}
     ${EIGEN3_INCLUDE_DIR}
-    ${DRAKE_PATH}/include
 )
 
 link_directories(
     ${catkin_LIBRARY_DIRS}
-    ${DRAKE_PATH}/lib
 )
 
 #Project Files
@@ -86,7 +77,7 @@ add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
 add_executable(planning_node src/planning_node.cpp)
 target_link_libraries(planning_node ${PROJECT_NAME})
 
-add_executable(whole_body_plan_demo src/whole_body_plan_demo.cpp)
+add_executable(whole_body_plan_demo demo/whole_body_plan_demo.cpp)
 target_link_libraries(whole_body_plan_demo ${PROJECT_NAME})
 
 add_executable(compute_com src/test/compute_com.cpp)
@@ -94,3 +85,9 @@ target_link_libraries(compute_com ${PROJECT_NAME})
 
 add_executable(plan_single_target demo/plan_single_target.cpp)
 target_link_libraries(plan_single_target ${PROJECT_NAME})
+
+add_executable(generate_valid_config demo/generate_valid_config.cpp)
+target_link_libraries(generate_valid_config ${PROJECT_NAME})
+
+add_executable(generate_grasping_posture demo/generate_grasping_posture.cpp)
+target_link_libraries(generate_grasping_posture ${PROJECT_NAME})

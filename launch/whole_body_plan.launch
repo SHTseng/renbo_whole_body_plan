@@ -5,9 +5,9 @@
   <arg name="gui" default="false" />
 
   <!-- Load the URDF, SRDF and other .yaml configuration files on the param server -->
-  <include file="$(find renbo_whole_body_plan)/launch/planning_context_whole_body.launch">
+  <!--<include file="$(find renbo_whole_body_plan)/launch/planning_context_whole_body.launch">
     <arg name="load_robot_description" value="true"/>
-  </include>
+  </include> -->
 
   <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
     <param name="use_gui" value="$(arg gui)"/>
@@ -22,7 +22,9 @@
 
   <node name="whole_body_plan" pkg="renbo_whole_body_plan" type="planning_node" cwd="node" output="screen">
     <rosparam command="load" file="$(find renbo_whole_body_plan)/config/planning_parameters.yaml"/>
-    <param name="file_path_DS_database" value="$(find renbo_whole_body_plan)/database/ds_dataset.dat" />
+		<param name="file_path_DS_database" value="$(find renbo_whole_body_plan)/database/ds_dataset.dat" />
   </node>
+
+  <node name="grasping_posture_generator" pkg="renbo_grasp_generator" type="posture_generator_node" cwd="node" output="screen" />
 
 </launch>

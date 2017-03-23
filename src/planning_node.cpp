@@ -15,6 +15,8 @@ int main(int argc, char* argv[])
 
   ros::ServiceServer generate_ds_database_ = nh.advertiseService("generate_ds_database", &RenboPlanner::generate_ds_database, &renbo_planner_);
 
+  ros::ServiceServer generate_valid_config = nh.advertiseService("generate_valid_config", &RenboPlanner::generate_valid_config, &renbo_planner_);
+
   ros::ServiceServer compute_robot_com = nh.advertiseService("compute_robot_com", &RenboPlanner::compute_robot_com, &renbo_planner_);
 
   ros::ServiceServer plan_single_target = nh.advertiseService("plan_single_target", &RenboPlanner::BiRRT_motion_plan, &renbo_planner_);

@@ -37,6 +37,7 @@ namespace renbo_constraint_sampler
 class StableConfigGenerator
 {
 public:
+
   enum FootSupport {DOUBLE_SUPPORT, SINGLE_SUPPORT_RIGHT, SINGLE_SUPPORT_LEFT};
 
   StableConfigGenerator(const std::string &group_name, double scale_sp);
@@ -63,10 +64,14 @@ public:
 
   bool test();
 
+  bool generateConfig();
+
 
 private:
 
   void initialize(double scale_sp);
+
+  robot_state::RobotState getRandConfig();
 
   bool isFeasible(const moveit::core::RobotState &robot_state);
 
@@ -93,7 +98,10 @@ private:
   ros::NodeHandle nh_;
 
   ros::Publisher visualization_pub_, support_polygon_pub_, com_pub_, pcom_pub_;
+
   ros::Publisher robot_state_publisher_;
+
+  ros::Publisher goal_state_publisher_;
 
   robot_model_loader::RobotModelLoaderPtr robot_model_loader_;
 

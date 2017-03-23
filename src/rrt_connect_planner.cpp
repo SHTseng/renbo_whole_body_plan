@@ -96,7 +96,7 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
 
   if (!loadDSDatabase(database_path_))
   {
-    ROS_ERROR("Load database fail fail");
+    ROS_ERROR("Load database fail");
     return sln_traj;
   }
   ros::Duration(2.0).sleep();
@@ -1036,8 +1036,9 @@ bool RRTConnectPlanner::loadDSDatabase(std::string path)
 
   ROS_INFO_STREAM_NAMED("rrt_planner", MOVEIT_CONSOLE_COLOR_CYAN << "Loading double support database..." << MOVEIT_CONSOLE_COLOR_RESET);
 
-  ds_config_file_.open(path.c_str());
-  if (!ds_config_file_)
+  std::ifstream ds_config_file;
+  ds_config_file.open(path.c_str());
+  if (!ds_config_file)
   {
     ROS_ERROR("Open dataset fail");
     return false;
@@ -1045,9 +1046,9 @@ bool RRTConnectPlanner::loadDSDatabase(std::string path)
 
   ds_database_configs_.clear();
 
-  while (ds_config_file_.good())
+  while (ds_config_file.good())
   {
-    std::getline(ds_config_file_, line);
+    std::getline(ds_config_file, line);
     std::istringstream in(line);
 
     while (in >> q_in)
@@ -1058,7 +1059,7 @@ bool RRTConnectPlanner::loadDSDatabase(std::string path)
     ds_database_configs_.push_back(config);
     config.clear();
 
-    if (ds_config_file_.eof())
+    if (ds_config_file.eof())
     {
       break;
     }
@@ -1067,7 +1068,7 @@ bool RRTConnectPlanner::loadDSDatabase(std::string path)
 
   ROS_INFO_STREAM_NAMED("rrt_planner", "Load total " << ds_database_config_count_ << " configs");
 
-  ds_config_file_.close();
+  ds_config_file.close();
 
   return true;
 }

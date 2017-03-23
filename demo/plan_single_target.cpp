@@ -7,7 +7,7 @@
 
 int main(int argc, char* argv[])
 {
-  ros::init(argc, argv, "whole_body_motion_plan");
+  ros::init(argc, argv, "motion_plan_single_target");
 
   ros::NodeHandle nh_;
 
@@ -30,8 +30,13 @@ int main(int argc, char* argv[])
   std::vector<double> goal_config;
   if (generate_posture.call(generate_posture_srv))
   {
-    ROS_INFO_STREAM("generate whole-body posture return state: " << generate_posture_srv.response.success);
+    ROS_INFO_STREAM("generate whole-body posture return state: " << (int)generate_posture_srv.response.success);
     goal_config = generate_posture_srv.response.solved_config;
+  }
+  else
+  {
+    ROS_INFO_STREAM("generate whole-body posture return state: " << (int)generate_posture_srv.response.success);
+    exit(1);
   }
 
   ros::ServiceClient plan_single_target = nh_.serviceClient<renbo_msgs::compute_motion_plan>("plan_single_target");
@@ -39,17 +44,17 @@ int main(int argc, char* argv[])
 
   plang_single_target_srv.request.scenario = SCENERIO;
 
-  std::vector<double> intial_config(27);
+  std::vector<double> intial_config(29);
   plang_single_target_srv.request.initial_config = intial_config;
   plang_single_target_srv.request.goal_config = goal_config;
 
   if (plan_single_target.call(plang_single_target_srv))
   {
-    ROS_INFO_STREAM("BiRRT planner return state: " << plang_single_target_srv.response.success);
+    ROS_INFO_STREAM("BiRRT planner return state: " << (int)plang_single_target_srv.response.success);
   }
   else
   {
-    ROS_ERROR("plan single target fail");
+    ROS_INFO_STREAM("BiRRT planner return state: " << (int)plang_single_target_srv.response.success);
     exit(1);
   }
 
