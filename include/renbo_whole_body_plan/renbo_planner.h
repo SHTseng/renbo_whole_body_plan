@@ -43,25 +43,35 @@ public:
 
   ~RenboPlanner();
 
-  bool generate_ds_database(rrt_planner_msgs::Generate_DS_Configs::Request &req, rrt_planner_msgs::Generate_DS_Configs::Response &res);
+  bool generate_ds_database(rrt_planner_msgs::Generate_DS_Configs::Request &req,
+                            rrt_planner_msgs::Generate_DS_Configs::Response &res);
 
-  bool compute_robot_com(rrt_planner_msgs::Generate_DS_Configs::Request &req, rrt_planner_msgs::Generate_DS_Configs::Response &res);
+  bool compute_robot_com(rrt_planner_msgs::Generate_DS_Configs::Request &req,
+                         rrt_planner_msgs::Generate_DS_Configs::Response &res);
 
-  bool generate_valid_config(renbo_msgs::generate_ss_config::Request &req, renbo_msgs::generate_ss_config::Response &res);
+  bool generate_valid_config(renbo_msgs::generate_ss_config::Request &req,
+                             renbo_msgs::generate_ss_config::Response &res);
 
-  bool sc_generator_test(rrt_planner_msgs::SC_Generator_Test::Request &req, rrt_planner_msgs::SC_Generator_Test::Response &res);
+  bool sc_generator_test(rrt_planner_msgs::SC_Generator_Test::Request &req,
+                         rrt_planner_msgs::SC_Generator_Test::Response &res);
 
-  bool rrt_planner_test(rrt_planner_msgs::compute_motion_plan::Request &req, rrt_planner_msgs::compute_motion_plan::Response &res);
+  bool rrt_planner_test(rrt_planner_msgs::compute_motion_plan::Request &req,
+                        rrt_planner_msgs::compute_motion_plan::Response &res);
 
-  bool final_pose_planning(rrt_planner_msgs::Final_Pose_Planning::Request &req, rrt_planner_msgs::Final_Pose_Planning::Response &res);
+  bool final_pose_planning(rrt_planner_msgs::Final_Pose_Planning::Request &req,
+                           rrt_planner_msgs::Final_Pose_Planning::Response &res);
 
-  bool pick_place_motion_plan(rrt_planner_msgs::compute_motion_plan::Request &req, rrt_planner_msgs::compute_motion_plan::Response &res);
+  bool pick_place_motion_plan(renbo_msgs::compute_motion_plan::Request &req,
+                              renbo_msgs::compute_motion_plan::Response &res);
 
-  bool generate_whole_body_posture(renbo_msgs::generate_whole_body_posture::Request &req, renbo_msgs::generate_whole_body_posture::Response &res);
+  bool generate_whole_body_posture(renbo_msgs::generate_whole_body_posture::Request &req,
+                                   renbo_msgs::generate_whole_body_posture::Response &res);
 
-  bool BiRRT_motion_plan(renbo_msgs::compute_motion_plan::Request &req, renbo_msgs::compute_motion_plan::Response &res);
+  bool BiRRT_motion_plan(renbo_msgs::compute_motion_plan::Request &req,
+                         renbo_msgs::compute_motion_plan::Response &res);
 
-  bool multi_goal_rrt_planner(rrt_planner_msgs::compute_motion_plan::Request &req, rrt_planner_msgs::compute_motion_plan::Response &res);
+  bool multi_goal_rrt_planner(renbo_msgs::compute_motion_plan::Request &req,
+                              renbo_msgs::compute_motion_plan::Response &res);
 
 private:
 
@@ -83,6 +93,9 @@ private:
   void triggerPlanningSceneUpade();
 
   void loadYamlParameter();
+
+  geometry_msgs::Pose getGeometryPose(double pos_x, double pos_y, double pos_z,
+                                      double quat_w, double quat_x, double quat_y, double quat_z) const;
 
   void PAUSE();
 
@@ -129,6 +142,8 @@ private:
   Eigen::Affine3d eef_original_config_;
 
   Eigen::Affine3d waist_original_config_;
+
+  moveit_msgs::CollisionObject target_attached_object_;
 
   //GENERAL PARAMS
   std::string ROBOT_DESCRIPTION;      // name of the robot description (a param name, so it can be changed externally)

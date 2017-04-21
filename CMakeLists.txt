@@ -83,8 +83,8 @@ target_link_libraries(whole_body_plan_demo ${PROJECT_NAME})
 add_executable(compute_com src/test/compute_com.cpp)
 target_link_libraries(compute_com ${PROJECT_NAME})
 
-add_executable(plan_single_target demo/plan_single_target.cpp)
-target_link_libraries(plan_single_target ${PROJECT_NAME})
+add_executable(plan_single_path demo/plan_single_path.cpp)
+target_link_libraries(plan_single_path ${PROJECT_NAME})
 
 add_executable(generate_valid_config demo/generate_valid_config.cpp)
 target_link_libraries(generate_valid_config ${PROJECT_NAME})

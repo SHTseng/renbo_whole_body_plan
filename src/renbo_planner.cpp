@@ -309,12 +309,12 @@ bool RenboPlanner::generate_whole_body_posture(renbo_msgs::generate_whole_body_p
 {
   scenario_ = req.scenario;
 
-  robot_state::RobotState robot_state_ = psm_->getPlanningScene()->getCurrentStateNonConst();
-  robot_state_.setToDefaultValues();
-  robot_state_.update();
+  robot_state::RobotState rstate = psm_->getPlanningScene()->getCurrentStateNonConst();
+  rstate.setToDefaultValues();
+  rstate.update();
 
-  eef_original_config_ = robot_state_.getGlobalLinkTransform(eef_name_);
-  waist_original_config_ = robot_state_.getGlobalLinkTransform(waist_name_);
+  eef_original_config_ = rstate.getGlobalLinkTransform(eef_name_);
+  waist_original_config_ = rstate.getGlobalLinkTransform(waist_name_);
 
   Eigen::Affine3d eef_pick_pose, eef_place_pose, waist_pick_pose, waist_place_pose;
   if (!updatePickPlacePose(scenario_, eef_pick_pose, eef_place_pose, waist_pick_pose, waist_place_pose))
@@ -324,38 +324,47 @@ bool RenboPlanner::generate_whole_body_posture(renbo_msgs::generate_whole_body_p
   }
 
   std::vector<double> whole_body_config(wb_jmg_->getVariableCount());
-  bool final_pose_flag = fpp_->solveFinalPose(robot_state_, eef_pick_pose, waist_pick_pose, whole_body_config);
+  bool final_pose_flag = fpp_->solveFinalPose(rstate, eef_pick_pose, waist_pick_pose, whole_body_config);
   if (!final_pose_flag)
   {
     ROS_ERROR("solve whole-body posture fail");
     res.success = 0;
     return false;
   }
+  rstate.copyJointGroupPositions(PLANNING_GROUP, res.solved_config_a);
+
+  final_pose_flag = fpp_->solveFinalPose(rstate, eef_place_pose, waist_place_pose, whole_body_config);
+  if (!final_pose_flag)
+  {
+    ROS_ERROR("solve whole-body posture fail");
+    res.success = 0;
+    return false;
+  }
+  rstate.copyJointGroupPositions(PLANNING_GROUP, res.solved_config_b);
 
   res.success = 1;
-  robot_state_.copyJointGroupPositions(PLANNING_GROUP, res.solved_config);
   ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "solved whole-body posture");
-
   return true;
 }
 
-bool RenboPlanner::pick_place_motion_plan(rrt_planner_msgs::compute_motion_plan::Request &req, rrt_planner_msgs::compute_motion_plan::Response &res)
+bool RenboPlanner::pick_place_motion_plan(renbo_msgs::compute_motion_plan::Request &req,
+                                          renbo_msgs::compute_motion_plan::Response &res)
 {
-  scenario_ = req.scenerio;
+  int scenario = req.scenario;
   rviz_visual_tools_->deleteAllMarkers();
 
-  robot_state::RobotState robot_state_ = psm_->getPlanningScene()->getCurrentStateNonConst();
-  robot_state_.setToDefaultValues();
-  robot_state_.update();
+  robot_state::RobotState rstate = psm_->getPlanningScene()->getCurrentStateNonConst();
+  rstate.setToDefaultValues();
+  rstate.update();
 
-  updatePSMRobotState(robot_state_);
-  loadCollisionEnvironment(scenario_);
+  updatePSMRobotState(rstate);
+  loadCollisionEnvironment(scenario);
 
-  eef_original_config_ = robot_state_.getGlobalLinkTransform(eef_name_);
-  waist_original_config_ = robot_state_.getGlobalLinkTransform(waist_name_);
+  eef_original_config_ = rstate.getGlobalLinkTransform(eef_name_);
+  waist_original_config_ = rstate.getGlobalLinkTransform(waist_name_);
 
   Eigen::Affine3d eef_pick_pose, eef_place_pose, waist_pick_pose, waist_place_pose;
-  if (!updatePickPlacePose(scenario_, eef_pick_pose, eef_place_pose, waist_pick_pose, waist_place_pose))
+  if (!updatePickPlacePose(scenario, eef_pick_pose, eef_place_pose, waist_pick_pose, waist_place_pose))
   {
     ROS_INFO_STREAM("Can't update pick and place poses");
     return false;
@@ -366,7 +375,7 @@ bool RenboPlanner::pick_place_motion_plan(rrt_planner_msgs::compute_motion_plan:
   ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "RRT planner: Start pick planning");
 
   std::vector<double> pick_config(wb_jmg_->getVariableCount());
-  bool final_pose_flag = fpp_->solveFinalPose(robot_state_, eef_pick_pose, waist_pick_pose, pick_config);
+  bool final_pose_flag = fpp_->solveFinalPose(rstate, eef_pick_pose, waist_pick_pose, pick_config);
   if (!final_pose_flag)
   {
     ROS_INFO_STREAM("Solve pick pose fail");
@@ -377,36 +386,33 @@ bool RenboPlanner::pick_place_motion_plan(rrt_planner_msgs::compute_motion_plan:
 
   //Setup place pose
   std::vector<double> place_config(wb_jmg_->getVariableCount());
-  final_pose_flag = fpp_->solveFinalPose(robot_state_, eef_place_pose, waist_place_pose, place_config);
+  final_pose_flag = fpp_->solveFinalPose(rstate, eef_place_pose, waist_place_pose, place_config);
   if (!final_pose_flag)
   {
     ROS_INFO_STREAM("Solve place pose fail");
     return false;
   }
 
-  robot_state_.setVariablePositions(wb_jmg_->getJointModelNames(), pick_config);
-  robot_state_.update();
-  updatePSMRobotState(robot_state_);
+  rstate.setVariablePositions(wb_jmg_->getJointModelNames(), pick_config);
+  rstate.update();
+  updatePSMRobotState(rstate);
 
   // Publish goal posture to rviz
   moveit_msgs::DisplayRobotState robot_state_msg_;
-  robot_state::robotStateToRobotStateMsg(robot_state_, robot_state_msg_.state);
+  robot_state::robotStateToRobotStateMsg(rstate, robot_state_msg_.state);
   goal_state_pub_.publish(robot_state_msg_);
 
   Eigen::Affine3d grasp_object_pose;
-  grasp_object_pose = robot_state_.getGlobalLinkTransform(eef_name_);
+  grasp_object_pose = rstate.getGlobalLinkTransform(eef_name_);
   grasp_object_pose.rotate(Eigen::AngleAxisd(M_PI/2, Eigen::Vector3d::UnitY()));
   Eigen::Vector3d transformed_translation = grasp_object_pose.rotation() * Eigen::Vector3d(0.0, -0.16, 0.0);
-
 
 //  grasp_object_pose.rotate(Eigen::AngleAxisd(-M_PI/2, Eigen::Vector3d::UnitX()));
 //  Eigen::Vector3d transformed_translation = grasp_object_pose.rotation() * Eigen::Vector3d(0.0, 0.0, -0.22);
 
   grasp_object_pose.translation() += transformed_translation;
 
-  /*
-   *  Adding collision grasp object to the scene
-   */
+  //Adding collision grasp object to the scene
   shape_msgs::SolidPrimitive target_object;
   target_object.type = target_object.CYLINDER;
   target_object.dimensions.resize(2);
@@ -435,39 +441,29 @@ bool RenboPlanner::pick_place_motion_plan(rrt_planner_msgs::compute_motion_plan:
 
   ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_BROWN << "RRT planner: pick pose is valid, start planning");
 
-  //RRT-Connect path planning, initial state to pick place.
+  //RRT-Connect path planning, initial state to goal state
   std::vector<double> initial_configuration(wb_jmg_->getVariableCount());
 
   rrt_->updateEnvironment(psm_->getPlanningScene());
   rrt_->setStartGoalConfigs(initial_configuration, pick_config);
-//  rrt_->setStartGoalConfigs(pick_config, place_config);
+  if (req.attach_object == 1)
+  {
+    moveit_msgs::AttachedCollisionObject attached_object;
+    attached_object.object = collision_target_object;
+    attached_object.link_name = eef_name_;
 
+    rrt_->is_grasped = 1;
+    rrt_->setAttachCollsionObject(attached_object);
+  }
 
-  moveit_msgs::DisplayTrajectory display_trajectory_ = rrt_->solveQuery(20000, 0.08);
+  moveit_msgs::DisplayTrajectory display_trajectory_ = rrt_->solveQuery(20000, 0.1);
   init_pick_trajectory_pub_.publish(display_trajectory_);
-
-  ros::Duration(2.0).sleep();
-
-//  moveit_msgs::AttachedCollisionObject attached_object;
-//  attached_object.object = collision_target_object;
-//  attached_object.link_name = eef_name_;
-
-//  // RRT-Connect path planning, pick to place.
-//  rrt_->is_grasped = true;
-//  rrt_->updateEnvironment(psm_->getPlanningScene());
-//  rrt_->setAttachCollsionObject(attached_object);
-//  rrt_->setStartGoalConfigs(pick_config, place_config);
-
-//  moveit_msgs::DisplayTrajectory display_trajectory_second_ = rrt_->solveQuery(20000, 0.1);
-//  pick_place_trajectory_pub_.publish(display_trajectory_second_);
-
-//  ros::Duration(2.0).sleep();
+  ros::Duration(0.5).sleep();
 
   rrt_->is_grasped = false;
-
   ps_->removeAllCollisionObjects();
 
-  res.success = true;
+  res.success = 1;
 
   return true;
 }
@@ -494,22 +490,34 @@ bool RenboPlanner::BiRRT_motion_plan(renbo_msgs::compute_motion_plan::Request &r
 
   rrt_->updateEnvironment(psm_->getPlanningScene());
   rrt_->setStartGoalConfigs(req.initial_config, req.goal_config);
+  if (req.attach_object == 1)
+  {
+    moveit_msgs::AttachedCollisionObject attached_object;
+    attached_object.object = target_attached_object_;
+    attached_object.link_name = eef_name_;
+    rrt_->setAttachCollsionObject(attached_object);
+    rrt_->is_grasped = true;
+    ROS_INFO("planning robot motion with attached object");
+  }
+  else
+  {
+    ROS_INFO("planning robot motion without attached object");
+  }
 
   moveit_msgs::DisplayTrajectory display_trajectory = rrt_->solveQuery(20000, 0.1);
   init_pick_trajectory_pub_.publish(display_trajectory);
-
-//  ros::Duration(0.5).sleep();
+  ros::Duration(0.5).sleep();
 
   res.whole_body_trajectory = display_trajectory;
+  res.success = 1;
 
-  res.success = true;
-  return res.success;
+  return true;
 }
 
-bool RenboPlanner::multi_goal_rrt_planner(rrt_planner_msgs::compute_motion_plan::Request &req,
-                                          rrt_planner_msgs::compute_motion_plan::Response &res)
+bool RenboPlanner::multi_goal_rrt_planner(renbo_msgs::compute_motion_plan::Request &req,
+                                          renbo_msgs::compute_motion_plan::Response &res)
 {
-  scenario_ = req.scenerio;
+  int scenario = req.scenario;
   rviz_visual_tools_->deleteAllMarkers();
 
   robot_state::RobotState robot_state_ = psm_->getPlanningScene()->getCurrentStateNonConst();
@@ -517,13 +525,13 @@ bool RenboPlanner::multi_goal_rrt_planner(rrt_planner_msgs::compute_motion_plan:
   robot_state_.update();
 
   updatePSMRobotState(robot_state_);
-  loadCollisionEnvironment(scenario_);
+  loadCollisionEnvironment(scenario);
 
   eef_original_config_ = robot_state_.getGlobalLinkTransform(eef_name_);
   waist_original_config_ = robot_state_.getGlobalLinkTransform(waist_name_);
 
   Eigen::Affine3d eef_pick_pose, eef_place_pose, waist_pick_pose, waist_place_pose;
-  if (!updatePickPlacePose(scenario_, eef_pick_pose, eef_place_pose, waist_pick_pose, waist_place_pose))
+  if (!updatePickPlacePose(scenario, eef_pick_pose, eef_place_pose, waist_pick_pose, waist_place_pose))
   {
     ROS_INFO_STREAM("Can't update pick and place poses");
     return false;
@@ -622,11 +630,14 @@ bool RenboPlanner::multi_goal_rrt_planner(rrt_planner_msgs::compute_motion_plan:
 
 void RenboPlanner::loadCollisionEnvironment(int type)
 {
-  geometry_msgs::Pose table_pose;
-  geometry_msgs::Pose pose;
-
   std::string package_path = package_path_;
   std::ifstream environment_description;
+
+  {
+    planning_scene_monitor::LockedPlanningSceneRW scene(psm_);
+    scene->removeAllCollisionObjects();
+    triggerPlanningSceneUpade();
+  }
 
   switch(type)
   {
@@ -643,30 +654,10 @@ void RenboPlanner::loadCollisionEnvironment(int type)
     }
     environment_description.close();
 
-    table_pose.position.x = temp_poses[0];
-    table_pose.position.y = temp_poses[1];
-    table_pose.position.z = temp_poses[2];
-    table_pose.orientation.w = temp_poses[3];
-    table_pose.orientation.x = temp_poses[4];
-    table_pose.orientation.y = temp_poses[5];
-    table_pose.orientation.z = temp_poses[6];
-
+    geometry_msgs::Pose table_pose = getGeometryPose(0.6, 0.125, 0.0, 1.0, 0.0, 0.0, 0.0);
     moveit_msgs::CollisionObject collision_mesh_table = loadMeshFromSource("ikea_table.stl", table_pose);
     addPSMCollisionObject(collision_mesh_table, getColor(222.0, 184.0, 135.0, 1.0));
 
-    geometry_msgs::Pose mug_pose;
-    mug_pose.position.x = temp_poses[7];
-    mug_pose.position.y = temp_poses[8];
-    mug_pose.position.z = temp_poses[9];
-    mug_pose.orientation.w = temp_poses[10];
-    mug_pose.orientation.x = temp_poses[11];
-    mug_pose.orientation.y = temp_poses[12];
-    mug_pose.orientation.z = temp_poses[13];
-
-    moveit_msgs::CollisionObject collision_mesh_mug = loadMeshFromSource("mug.stl", mug_pose);
-    addPSMCollisionObject(collision_mesh_mug, getColor(255.0, 255.0, 255.0, 1.0));
-
-    geometry_msgs::Pose box_pose;
     shape_msgs::SolidPrimitive box;
     box.type = box.BOX;
     box.dimensions.resize(3);
@@ -674,13 +665,7 @@ void RenboPlanner::loadCollisionEnvironment(int type)
     box.dimensions[1] = 0.165;
     box.dimensions[2] = 0.165;
 
-    box_pose.position.x = temp_poses[14];
-    box_pose.position.y = temp_poses[15];
-    box_pose.position.z = temp_poses[16];
-    box_pose.orientation.w = temp_poses[17];
-    box_pose.orientation.x = temp_poses[18];
-    box_pose.orientation.y = temp_poses[19];
-    box_pose.orientation.z = temp_poses[20];
+    geometry_msgs::Pose box_pose = getGeometryPose(0.62, -0.2, 0.82, 1.0, 0.0, 0.0, 0.0);
 
     moveit_msgs::CollisionObject collision_box;
     collision_box.id = "box";
@@ -688,23 +673,22 @@ void RenboPlanner::loadCollisionEnvironment(int type)
     collision_box.primitives.push_back(box);
     collision_box.primitive_poses.push_back(box_pose);
     collision_box.operation = collision_box.ADD;
-
     addPSMCollisionObject(collision_box, getColor(255.0, 255.0, 255.0, 1.0));
+
+    geometry_msgs::Pose mug_pose = getGeometryPose(temp_poses[0], temp_poses[1], temp_poses[2],
+        temp_poses[3], temp_poses[4], temp_poses[5], temp_poses[6]);
+    moveit_msgs::CollisionObject collision_mesh_mug = loadMeshFromSource("mug.stl", mug_pose);
+    addPSMCollisionObject(collision_mesh_mug, getColor(255.0, 255.0, 255.0, 1.0));
+
+    target_attached_object_ = collision_mesh_mug;
 
     break;
   }
   case 1:
   {
-    table_pose.position.x = 0.6;
-    table_pose.position.y = 0.125;
-    table_pose.position.z = 0.0;
-    table_pose.orientation.w = 1.0;
-    table_pose.orientation.x = 0.0;
-    table_pose.orientation.y = 0.0;
-    table_pose.orientation.z = 0.0;
-
+    // fixed environment
+    geometry_msgs::Pose table_pose = getGeometryPose(0.6, 0.125, 0.0, 1.0, 0.0, 0.0, 0.0);
     moveit_msgs::CollisionObject collision_mesh_table = loadMeshFromSource("ikea_table.stl", table_pose);
-
     addPSMCollisionObject(collision_mesh_table, getColor(222.0, 184.0, 135.0, 1.0));
 
     shape_msgs::SolidPrimitive box;
@@ -714,37 +698,50 @@ void RenboPlanner::loadCollisionEnvironment(int type)
     box.dimensions[1] = 0.04;
     box.dimensions[2] = 0.15;
 
-    pose.position.x = 0.65;
-    pose.position.y = 0.15;
-    pose.position.z = 0.85;
-    pose.orientation.w = 1.0;
-    pose.orientation.x = 0.0;
-    pose.orientation.y = 0.0;
-    pose.orientation.z = 0.0;
-
+    geometry_msgs::Pose box_pose = getGeometryPose(0.65, 0.1, 0.85, 1.0, 0.0, 0.0, 0.0);
     moveit_msgs::CollisionObject collision_box;
     collision_box.id = "box";
     collision_box.header.frame_id = "r_sole";
     collision_box.primitives.push_back(box);
-    collision_box.primitive_poses.push_back(pose);
+    collision_box.primitive_poses.push_back(box_pose);
     collision_box.operation = collision_box.ADD;
 
     addPSMCollisionObject(collision_box, getColor(222.0, 184.0, 135.0, 1.0));
+
+    //Adding collision grasp object to the scene
+    shape_msgs::SolidPrimitive target_object;
+    target_object.type = target_object.CYLINDER;
+    target_object.dimensions.resize(2);
+    target_object.dimensions[0] = 0.15;
+    target_object.dimensions[1] = 0.025;
+
+    geometry_msgs::Pose bottle_pose = getGeometryPose(0.43, -0.18, 0.8, 1.0, 0.0, 0.0, 0.0);
+    moveit_msgs::CollisionObject collision_target_object;
+    collision_target_object.id = "cup";
+    collision_target_object.header.frame_id = base_frame_;
+    collision_target_object.primitives.push_back(target_object);
+    collision_target_object.primitive_poses.push_back(bottle_pose);
+    collision_target_object.operation = moveit_msgs::CollisionObject::ADD;
+
+    addPSMCollisionObject(collision_target_object, getColor(169.0, 169.0, 169.0, 1.0));
 
     break;
   }
   case 2:
   {
-    table_pose.position.x = 0.6;
-    table_pose.position.y = 0.125;
-    table_pose.position.z = 0.0;
-    table_pose.orientation.w = 1.0;
-    table_pose.orientation.x = 0.0;
-    table_pose.orientation.y = 0.0;
-    table_pose.orientation.z = 0.0;
+    package_path = package_path.append("/database/env_2.dat");
+    environment_description.open(package_path.c_str());
 
+    std::vector<double> temp_poses;
+    double temp = 0.0;
+    while (environment_description >> temp)
+    {
+      temp_poses.push_back(temp);
+    }
+    environment_description.close();
+
+    geometry_msgs::Pose table_pose = getGeometryPose(0.6, 0.125, 0.0, 1.0, 0.0, 0.0, 0.0);
     moveit_msgs::CollisionObject collision_mesh_table = loadMeshFromSource("ikea_table.stl", table_pose);
-
     addPSMCollisionObject(collision_mesh_table, getColor(222.0, 184.0, 135.0, 1.0));
 
     shape_msgs::SolidPrimitive box;
@@ -754,52 +751,62 @@ void RenboPlanner::loadCollisionEnvironment(int type)
     box.dimensions[1] = 0.338;
     box.dimensions[2] = 0.167;
 
-    pose.position.x = 0.6;
-    pose.position.y = 0.125+0.1;
-    pose.position.z = 0.74+0.0835;
-    pose.orientation.w = 1.0;
-    pose.orientation.x = 0.0;
-    pose.orientation.y = 0.0;
-    pose.orientation.z = 0.0;
-
+    geometry_msgs::Pose box_pose = getGeometryPose(0.6, 0.225, 0.8235, 1.0, 0.0, 0.0, 0.0);
     moveit_msgs::CollisionObject collision_box;
     collision_box.id = "box";
     collision_box.header.frame_id = "r_sole";
     collision_box.primitives.push_back(box);
-    collision_box.primitive_poses.push_back(pose);
+    collision_box.primitive_poses.push_back(box_pose);
     collision_box.operation = collision_box.ADD;
-
     addPSMCollisionObject(collision_box, getColor(255.0, 255.0, 255.0, 1.0));
+
+    //Adding collision grasp object to the scene
+    shape_msgs::SolidPrimitive target_object;
+    target_object.type = target_object.CYLINDER;
+    target_object.dimensions.resize(2);
+    target_object.dimensions[0] = 0.15;
+    target_object.dimensions[1] = 0.025;
+
+    geometry_msgs::Pose bottle_pose = getGeometryPose(0.43, -0.18, 0.8, 1.0, 0.0, 0.0, 0.0);
+    moveit_msgs::CollisionObject collision_target_object;
+    collision_target_object.id = "cup";
+    collision_target_object.header.frame_id = base_frame_;
+    collision_target_object.primitives.push_back(target_object);
+    collision_target_object.primitive_poses.push_back(bottle_pose);
+    collision_target_object.operation = moveit_msgs::CollisionObject::ADD;
+    addPSMCollisionObject(collision_target_object, getColor(169.0, 169.0, 169.0, 1.0));
 
     break;
   }
   case 3:
   {
-    table_pose.position.x = 0.6;
-    table_pose.position.y = 0.0;
-    table_pose.position.z = 0.0;
-    table_pose.orientation.w = 0.0;
-    table_pose.orientation.x = 0.0;
-    table_pose.orientation.y = 0.0;
-    table_pose.orientation.z = 1.0;
-
-    moveit_msgs::CollisionObject collision_mesh_closet = loadMeshFromSource("closet_v3.stl", table_pose);
+    // fixed environment
+    geometry_msgs::Pose closet_pose = getGeometryPose(0.6, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0);
+    moveit_msgs::CollisionObject collision_mesh_closet = loadMeshFromSource("closet_v3.stl", closet_pose);
     addPSMCollisionObject(collision_mesh_closet, getColor(222.0, 184.0, 135.0, 1.0));
+
+    // grasped object
+    shape_msgs::SolidPrimitive target_object;
+    target_object.type = target_object.CYLINDER;
+    target_object.dimensions.resize(2);
+    target_object.dimensions[0] = 0.15;
+    target_object.dimensions[1] = 0.025;
+
+    geometry_msgs::Pose bottle_pose = getGeometryPose(0.43, -0.18, 0.8, 1.0, 0.0, 0.0, 0.0);
+    moveit_msgs::CollisionObject collision_target_object;
+    collision_target_object.id = "cup";
+    collision_target_object.header.frame_id = base_frame_;
+    collision_target_object.primitives.push_back(target_object);
+    collision_target_object.primitive_poses.push_back(bottle_pose);
+    collision_target_object.operation = moveit_msgs::CollisionObject::ADD;
+    addPSMCollisionObject(collision_target_object, getColor(169.0, 169.0, 169.0, 1.0));
 
     break;
   }
   case 4:
   {
-    table_pose.position.x = 0.6;
-    table_pose.position.y = 0.125;
-    table_pose.position.z = 0.0;
-    table_pose.orientation.w = 1.0;
-    table_pose.orientation.x = 0.0;
-    table_pose.orientation.y = 0.0;
-    table_pose.orientation.z = 0.0;
-
+    geometry_msgs::Pose table_pose = getGeometryPose(0.6, 0.125, 0.0, 1.0, 0.0, 0.0, 0.0);
     moveit_msgs::CollisionObject collision_mesh_table = loadMeshFromSource("ikea_table.stl", table_pose);
-
     addPSMCollisionObject(collision_mesh_table, getColor(222.0, 184.0, 135.0, 1.0));
 
     shape_msgs::SolidPrimitive box;
@@ -809,22 +816,31 @@ void RenboPlanner::loadCollisionEnvironment(int type)
     box.dimensions[1] = 0.02;
     box.dimensions[2] = 0.25;
 
-    pose.position.x = 0.55;
-    pose.position.y = -0.28;
-    pose.position.z = 0.85;
-    pose.orientation.w = 1.0;
-    pose.orientation.x = 0.0;
-    pose.orientation.y = 0.0;
-    pose.orientation.z = 0.0;
-
+    geometry_msgs::Pose box_pose = getGeometryPose(0.55, -0.28, 0.85, 1.0, 0.0, 0.0, 0.0);
     moveit_msgs::CollisionObject collision_box;
     collision_box.id = "box";
     collision_box.header.frame_id = "r_sole";
     collision_box.primitives.push_back(box);
-    collision_box.primitive_poses.push_back(pose);
+    collision_box.primitive_poses.push_back(box_pose);
     collision_box.operation = collision_box.ADD;
-
     addPSMCollisionObject(collision_box, getColor(255.0, 255.0, 255.0, 1.0));
+
+    //Adding collision grasp object to the scene
+    shape_msgs::SolidPrimitive target_object;
+    target_object.type = target_object.CYLINDER;
+    target_object.dimensions.resize(2);
+    target_object.dimensions[0] = 0.15;
+    target_object.dimensions[1] = 0.025;
+
+    geometry_msgs::Pose bottle_pose = getGeometryPose(0.43, -0.18, 0.8, 1.0, 0.0, 0.0, 0.0);
+    moveit_msgs::CollisionObject collision_target_object;
+    collision_target_object.id = "cup";
+    collision_target_object.header.frame_id = base_frame_;
+    collision_target_object.primitives.push_back(target_object);
+    collision_target_object.primitive_poses.push_back(bottle_pose);
+    collision_target_object.operation = moveit_msgs::CollisionObject::ADD;
+    addPSMCollisionObject(collision_target_object, getColor(169.0, 169.0, 169.0, 1.0));
+
     break;
   }
   case 9:
@@ -1085,6 +1101,23 @@ std_msgs::ColorRGBA RenboPlanner::getColor(float r, float g, float b, float a)
 
   return color;
 }
+
+geometry_msgs::Pose RenboPlanner::getGeometryPose(double pos_x, double pos_y, double pos_z,
+                                                  double quat_w, double quat_x, double quat_y, double quat_z) const
+{
+  geometry_msgs::Pose pose_;
+
+  pose_.position.x = pos_x;
+  pose_.position.y = pos_y;
+  pose_.position.z = pos_z;
+  pose_.orientation.w = quat_w;
+  pose_.orientation.x = quat_x;
+  pose_.orientation.y = quat_y;
+  pose_.orientation.z = quat_z;
+
+  return pose_;
+}
+
 
 void RenboPlanner::PAUSE()
 {

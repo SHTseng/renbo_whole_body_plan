@@ -14,7 +14,7 @@ solution_file_path: package://renbo_whole_body_plan/trajectory/
 #------ Stable Config Generator   
 scg_max_samples: 5000  #standard: 2000
 scg_max_ik_iterations: 5 
-ds_config_count: 20000
+ds_config_count: 5000
       
 #------ RRT Planner
 planner_step_factor: 0.1  #standard 0.1

@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
   if (generate_posture.call(generate_posture_srv))
   {
     ROS_INFO_STREAM("generate whole-body posture return state: " << (int)generate_posture_srv.response.success);
-    goal_config = generate_posture_srv.response.solved_config;
+    goal_config = generate_posture_srv.response.solved_config_a;
   }
   else
   {

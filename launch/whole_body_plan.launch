@@ -1,13 +1,13 @@
 <launch>
 
   <arg name="debug" default="false"/>
-  <arg name="run_rviz" default="true" />
+  <arg name="run_rviz" default="false" />
   <arg name="gui" default="false" />
 
   <!-- Load the URDF, SRDF and other .yaml configuration files on the param server -->
-  <!--<include file="$(find renbo_whole_body_plan)/launch/planning_context_whole_body.launch">
+  <include file="$(find renbo_whole_body_plan)/launch/planning_context_whole_body.launch">
     <arg name="load_robot_description" value="true"/>
-  </include> -->
+  </include> 
 
   <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
     <param name="use_gui" value="$(arg gui)"/>

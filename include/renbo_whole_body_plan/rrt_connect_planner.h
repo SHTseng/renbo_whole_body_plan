@@ -112,7 +112,7 @@ protected:
   bool checkCollision(const moveit::core::RobotState& state);
 
   //Write the solution path configurations into a file
-  void writePath(tree T_start, tree T_goal, node q_near,
+  void postProcessing(tree T_start, tree T_goal, node q_near,
                  int connector, moveit_msgs::DisplayTrajectory&disp_trajectory_msgs,
                  std::string solution_file_path);
 
