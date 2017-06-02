@@ -142,14 +142,14 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
               state_.setVariablePositions(wb_joint_names_, solution_path_configs_[i]);
               Eigen::Affine3d eef_pose = state_.getGlobalLinkTransform(eef_name_);
 
-              rviz_visual_tools_->publishSphere(eef_pose, rviz_visual_tools::ORANGE, rviz_visual_tools::MEDIUM);
-              rviz_visual_tools_->trigger();
+//              rviz_visual_tools_->publishSphere(eef_pose, rviz_visual_tools::ORANGE, rviz_visual_tools::MEDIUM);
+//              rviz_visual_tools_->trigger();
 
               path_pts.push_back(eef_pose);
             }
 
-            rviz_visual_tools_->publishPath(path_pts, rviz_visual_tools::YELLOW, rviz_visual_tools::MEDIUM);
-            rviz_visual_tools_->trigger();
+//            rviz_visual_tools_->publishPath(path_pts, rviz_visual_tools::YELLOW, rviz_visual_tools::MEDIUM);
+//            rviz_visual_tools_->trigger();
           }
 
           dura =  end_time - start_time;
@@ -200,14 +200,14 @@ moveit_msgs::DisplayTrajectory RRTConnectPlanner::solveQuery(int max_iter, doubl
               state_.setVariablePositions(wb_joint_names_, solution_path_configs_[i]);
               Eigen::Affine3d eef_pose = state_.getGlobalLinkTransform(eef_name_);
 
-              rviz_visual_tools_->publishSphere(eef_pose, rviz_visual_tools::ORANGE, rviz_visual_tools::MEDIUM);
-              rviz_visual_tools_->trigger();
+//              rviz_visual_tools_->publishSphere(eef_pose, rviz_visual_tools::ORANGE, rviz_visual_tools::MEDIUM);
+//              rviz_visual_tools_->trigger();
 
               path_pts.push_back(eef_pose);
             }
 
-            rviz_visual_tools_->publishPath(path_pts, rviz_visual_tools::YELLOW, rviz_visual_tools::MEDIUM);
-            rviz_visual_tools_->trigger();
+//            rviz_visual_tools_->publishPath(path_pts, rviz_visual_tools::YELLOW, rviz_visual_tools::MEDIUM);
+//            rviz_visual_tools_->trigger();
           }
 
           dura =  end_time - start_time;
@@ -653,7 +653,7 @@ void RRTConnectPlanner::postProcessing(tree T_start, tree T_goal, node q_near,
 
   /******************* PATH SHORTCUTTER *******************/
   trajectory shortcutted_path;
-  int num_intermediate_waypoints_approach = 100;
+  int num_intermediate_waypoints_approach = 300;
 
   bool shorcut_flag = false;
   shorcut_flag = pathShortCutter(solution_path_configs, shortcutted_path, num_intermediate_waypoints_approach);
@@ -673,7 +673,7 @@ void RRTConnectPlanner::postProcessing(tree T_start, tree T_goal, node q_near,
       path_pts_.push_back(robot_state_.getGlobalLinkTransform(eef_name_));
     }
 
-    rviz_visual_tools_->publishPath(path_pts_, rviz_visual_tools::GREEN, rviz_visual_tools::MEDIUM);
+    rviz_visual_tools_->publishPath(path_pts_, rviz_visual_tools::GREEN, rviz_visual_tools::LARGE);
     rviz_visual_tools_->trigger();
 
   }
@@ -800,7 +800,8 @@ void RRTConnectPlanner::generateTrajectory(std::vector<std::vector<double> > pat
 
   for (std::size_t i = 0; i < moveit_robot_traj.joint_trajectory.points.size(); i++)
   {
-    smooth_jnt_traj_msgs.points[i].time_from_start = moveit_robot_traj.joint_trajectory.points[i].time_from_start + ros::Duration(2.0);
+    smooth_jnt_traj_msgs.points[i].time_from_start = moveit_robot_traj.joint_trajectory.points[i].time_from_start + ros::Duration(0.5);
+    // original duration 2.0
   }
 
   moveit_robot_traj.joint_trajectory = smooth_jnt_traj_msgs;

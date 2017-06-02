@@ -5,15 +5,9 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Grid1/Offset1
-        - /RobotState2/Links1/r_gripper1
-        - /RobotState2/Links1/r_gripper1/Position1
-        - /RobotState2/Links1/r_gripper1/Orientation1
-        - /RobotState2/Links1/r_sole1
-        - /RobotState3/Links1
-        - /RobotState3/Links1/r_sole1
         - /PlanningScene1/Scene Geometry1
         - /PlanningScene1/Scene Robot1
-        - /Trajectory1
+        - /MarkerArray4
       Splitter Ratio: 0.564023972
     Tree Height: 893
   - Class: rviz/Help
@@ -411,13 +405,13 @@ Visualization Manager:
           Show Trail: false
           Value: true
       Name: RobotState
-      Robot Alpha: 0.5
+      Robot Alpha: 1
       Robot Description: robot_description
       Robot State Topic: /whole_body_plan/goal_state
       Show All Links: true
       Show Highlights: true
       Value: true
-      Visual Enabled: false
+      Visual Enabled: true
     - Attached Body Color: 150; 50; 150
       Class: moveit_rviz_plugin/RobotState
       Collision Enabled: false
@@ -598,20 +592,20 @@ Visualization Manager:
           Show Trail: false
           Value: true
       Name: RobotState
-      Robot Alpha: 0.5
+      Robot Alpha: 1
       Robot Description: robot_description
-      Robot State Topic: /grasping_posture_generator/renbo_robot_state
+      Robot State Topic: display_robot_state
       Show All Links: true
       Show Highlights: true
       Value: true
       Visual Enabled: false
-    - Alpha: 1
-      Class: rviz/Polygon
-      Color: 25; 255; 0
+    - Class: rviz/Marker
       Enabled: true
-      Name: Polygon
-      Topic: /whole_body_plan/support_polygon
-      Unreliable: false
+      Marker Topic: /whole_body_plan/com
+      Name: Marker
+      Namespaces:
+        {}
+      Queue Size: 100
       Value: true
     - Class: rviz/Marker
       Enabled: true
@@ -621,17 +615,17 @@ Visualization Manager:
         {}
       Queue Size: 100
       Value: true
-    - Class: rviz/Marker
+    - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /whole_body_plan/com
-      Name: Marker
+      Marker Topic: /rviz_visual_markers
+      Name: MarkerArray
       Namespaces:
         {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /rviz_visual_markers
+      Marker Topic: /whole_body_plan/stability_visualization
       Name: MarkerArray
       Namespaces:
         {}
@@ -1026,7 +1020,7 @@ Visualization Manager:
       Show Robot Collision: false
       Show Robot Visual: true
       Show Trail: false
-      State Display Time: 0.05 s
+      State Display Time: REALTIME
       Trajectory Topic: /whole_body_plan/init_pick_trajectory
       Value: true
     - Class: moveit_rviz_plugin/Trajectory
@@ -1219,6 +1213,14 @@ Visualization Manager:
       State Display Time: 0.05 s
       Trajectory Topic: /whole_body_plan/pick_place_trajectory
       Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /visulize_trajectory/planned_path_marker
+      Name: MarkerArray
+      Namespaces:
+        {}
+      Queue Size: 101
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -1234,24 +1236,24 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 4.64170742
+      Distance: 3.6371901
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.091871798
-        Y: 0.0117849
+        X: 0.309033215
+        Y: 0.118877932
         Z: 1.63913995e-07
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.575201809
+      Pitch: 0.415200859
       Target Frame: base_footprint
       Value: XYOrbit (rviz)
-      Yaw: 5.63410664
+      Yaw: 5.70924711
     Saved: ~
 Window Geometry:
   Displays:

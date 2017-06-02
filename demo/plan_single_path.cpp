@@ -46,21 +46,8 @@ int main(int argc, char* argv[])
   plang_single_target_srv.request.scenario = SCENERIO;
 
   std::vector<double> intial_config(29);
-//  plang_single_target_srv.request.initial_config = intial_config;
-//  plang_single_target_srv.request.goal_config = goal_config;
-
-//  if (plan_single_target.call(plang_single_target_srv))
-//  {
-//    ROS_INFO_STREAM("BiRRT planner return state: " << (int)plang_single_target_srv.response.success);
-//  }
-//  else
-//  {
-//    ROS_INFO_STREAM("BiRRT planner return state: " << (int)plang_single_target_srv.response.success);
-//    exit(1);
-//  }
-  plang_single_target_srv.request.initial_config = goal_config;
-  plang_single_target_srv.request.goal_config = goal_config_b;
-  plang_single_target_srv.request.attach_object = 0;
+  plang_single_target_srv.request.initial_config = intial_config;
+  plang_single_target_srv.request.goal_config = goal_config;
 
   if (plan_single_target.call(plang_single_target_srv))
   {
@@ -71,6 +58,19 @@ int main(int argc, char* argv[])
     ROS_INFO_STREAM("BiRRT planner return state: " << (int)plang_single_target_srv.response.success);
     exit(1);
   }
+//  plang_single_target_srv.request.initial_config = goal_config;
+//  plang_single_target_srv.request.goal_config = goal_config_b;
+//  plang_single_target_srv.request.attach_object = 1;
+
+//  if (plan_single_target.call(plang_single_target_srv))
+//  {
+//    ROS_INFO_STREAM("BiRRT planner return state: " << (int)plang_single_target_srv.response.success);
+//  }
+//  else
+//  {
+//    ROS_INFO_STREAM("BiRRT planner return state: " << (int)plang_single_target_srv.response.success);
+//    exit(1);
+//  }
 
 //  plang_single_target_srv.request.initial_config = goal_config;
 //  plang_single_target_srv.request.goal_config = intial_config;

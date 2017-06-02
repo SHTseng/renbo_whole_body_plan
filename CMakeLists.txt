@@ -91,3 +91,7 @@ target_link_libraries(generate_valid_config ${PROJECT_NAME})
 
 add_executable(generate_grasping_posture demo/generate_grasping_posture.cpp)
 target_link_libraries(generate_grasping_posture ${PROJECT_NAME})
+
+add_executable(visualize_trajectory demo/visualize_trajectory.cpp)
+target_link_libraries(visualize_trajectory ${PROJECT_NAME})
+

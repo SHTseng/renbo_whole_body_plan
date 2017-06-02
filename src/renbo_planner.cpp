@@ -402,35 +402,6 @@ bool RenboPlanner::pick_place_motion_plan(renbo_msgs::compute_motion_plan::Reque
   robot_state::robotStateToRobotStateMsg(rstate, robot_state_msg_.state);
   goal_state_pub_.publish(robot_state_msg_);
 
-  Eigen::Affine3d grasp_object_pose;
-  grasp_object_pose = rstate.getGlobalLinkTransform(eef_name_);
-  grasp_object_pose.rotate(Eigen::AngleAxisd(M_PI/2, Eigen::Vector3d::UnitY()));
-  Eigen::Vector3d transformed_translation = grasp_object_pose.rotation() * Eigen::Vector3d(0.0, -0.16, 0.0);
-
-//  grasp_object_pose.rotate(Eigen::AngleAxisd(-M_PI/2, Eigen::Vector3d::UnitX()));
-//  Eigen::Vector3d transformed_translation = grasp_object_pose.rotation() * Eigen::Vector3d(0.0, 0.0, -0.22);
-
-  grasp_object_pose.translation() += transformed_translation;
-
-  //Adding collision grasp object to the scene
-  shape_msgs::SolidPrimitive target_object;
-  target_object.type = target_object.CYLINDER;
-  target_object.dimensions.resize(2);
-  target_object.dimensions[0] = 0.15;
-  target_object.dimensions[1] = 0.025;
-
-  geometry_msgs::Pose pose;
-  tf::poseEigenToMsg(grasp_object_pose, pose);
-
-  moveit_msgs::CollisionObject collision_target_object;
-  collision_target_object.id = "cup";
-  collision_target_object.header.frame_id = base_frame_;
-  collision_target_object.primitives.push_back(target_object);
-  collision_target_object.primitive_poses.push_back(pose);
-  collision_target_object.operation = moveit_msgs::CollisionObject::ADD;
-
-//  addPSMCollisionObject(collision_target_object, getColor(169.0, 169.0, 169.0, 1.0));
-
   //  Check robot state collision
   bool collision_free = checkCollision(psm_->getPlanningScene());
   if (!collision_free)
@@ -449,7 +420,7 @@ bool RenboPlanner::pick_place_motion_plan(renbo_msgs::compute_motion_plan::Reque
   if (req.attach_object == 1)
   {
     moveit_msgs::AttachedCollisionObject attached_object;
-    attached_object.object = collision_target_object;
+    attached_object.object = target_attached_object_;
     attached_object.link_name = eef_name_;
 
     rrt_->is_grasped = 1;
@@ -662,8 +633,8 @@ void RenboPlanner::loadCollisionEnvironment(int type)
     box.type = box.BOX;
     box.dimensions.resize(3);
     box.dimensions[0] = 0.345;
-    box.dimensions[1] = 0.165;
-    box.dimensions[2] = 0.165;
+    box.dimensions[1] = 0.165; //0.165 // 0.22
+    box.dimensions[2] = 0.165; // 0.165 // 0.25
 
     geometry_msgs::Pose box_pose = getGeometryPose(0.62, -0.2, 0.82, 1.0, 0.0, 0.0, 0.0);
 
@@ -681,7 +652,6 @@ void RenboPlanner::loadCollisionEnvironment(int type)
     addPSMCollisionObject(collision_mesh_mug, getColor(255.0, 255.0, 255.0, 1.0));
 
     target_attached_object_ = collision_mesh_mug;
-
     break;
   }
   case 1:
@@ -767,7 +737,8 @@ void RenboPlanner::loadCollisionEnvironment(int type)
     target_object.dimensions[0] = 0.15;
     target_object.dimensions[1] = 0.025;
 
-    geometry_msgs::Pose bottle_pose = getGeometryPose(0.43, -0.18, 0.8, 1.0, 0.0, 0.0, 0.0);
+    geometry_msgs::Pose bottle_pose = getGeometryPose(temp_poses[0], temp_poses[1], temp_poses[2],
+                                                      temp_poses[3], temp_poses[4], temp_poses[5], temp_poses[6]);
     moveit_msgs::CollisionObject collision_target_object;
     collision_target_object.id = "cup";
     collision_target_object.header.frame_id = base_frame_;
@@ -776,12 +747,24 @@ void RenboPlanner::loadCollisionEnvironment(int type)
     collision_target_object.operation = moveit_msgs::CollisionObject::ADD;
     addPSMCollisionObject(collision_target_object, getColor(169.0, 169.0, 169.0, 1.0));
 
+    target_attached_object_ = collision_target_object;
     break;
   }
   case 3:
   {
+    package_path = package_path.append("/database/env_3.dat");
+    environment_description.open(package_path.c_str());
+
+    std::vector<double> temp_poses;
+    double temp = 0.0;
+    while (environment_description >> temp)
+    {
+      temp_poses.push_back(temp);
+    }
+    environment_description.close();
+
     // fixed environment
-    geometry_msgs::Pose closet_pose = getGeometryPose(0.6, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0);
+    geometry_msgs::Pose closet_pose = getGeometryPose(0.7, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0);
     moveit_msgs::CollisionObject collision_mesh_closet = loadMeshFromSource("closet_v3.stl", closet_pose);
     addPSMCollisionObject(collision_mesh_closet, getColor(222.0, 184.0, 135.0, 1.0));
 
@@ -792,7 +775,8 @@ void RenboPlanner::loadCollisionEnvironment(int type)
     target_object.dimensions[0] = 0.15;
     target_object.dimensions[1] = 0.025;
 
-    geometry_msgs::Pose bottle_pose = getGeometryPose(0.43, -0.18, 0.8, 1.0, 0.0, 0.0, 0.0);
+    geometry_msgs::Pose bottle_pose = getGeometryPose(temp_poses[0], temp_poses[1], temp_poses[2],
+        temp_poses[3], temp_poses[4], temp_poses[5], temp_poses[6]);
     moveit_msgs::CollisionObject collision_target_object;
     collision_target_object.id = "cup";
     collision_target_object.header.frame_id = base_frame_;
@@ -801,6 +785,7 @@ void RenboPlanner::loadCollisionEnvironment(int type)
     collision_target_object.operation = moveit_msgs::CollisionObject::ADD;
     addPSMCollisionObject(collision_target_object, getColor(169.0, 169.0, 169.0, 1.0));
 
+    target_attached_object_ = collision_target_object;
     break;
   }
   case 4:
@@ -840,6 +825,43 @@ void RenboPlanner::loadCollisionEnvironment(int type)
     collision_target_object.primitive_poses.push_back(bottle_pose);
     collision_target_object.operation = moveit_msgs::CollisionObject::ADD;
     addPSMCollisionObject(collision_target_object, getColor(169.0, 169.0, 169.0, 1.0));
+
+    break;
+  }
+  case 5:
+  {
+    package_path = package_path.append("/database/env_5.dat");
+    environment_description.open(package_path.c_str());
+
+    std::vector<double> temp_poses;
+    double temp = 0.0;
+    while (environment_description >> temp)
+    {
+      temp_poses.push_back(temp);
+    }
+    environment_description.close();
+
+    geometry_msgs::Pose table_pose = getGeometryPose(0.6, 0.125, 0.0, 1.0, 0.0, 0.0, 0.0);
+    moveit_msgs::CollisionObject collision_mesh_table = loadMeshFromSource("ikea_lack_table.stl", table_pose);
+    addPSMCollisionObject(collision_mesh_table, getColor(222.0, 184.0, 135.0, 1.0));
+
+    shape_msgs::SolidPrimitive target_object;
+    target_object.type = target_object.CYLINDER;
+    target_object.dimensions.resize(2);
+    target_object.dimensions[0] = 0.15;
+    target_object.dimensions[1] = 0.025;
+
+    geometry_msgs::Pose bottle_pose = getGeometryPose(temp_poses[0], temp_poses[1], temp_poses[2],
+        temp_poses[3], temp_poses[4], temp_poses[5], temp_poses[6]);
+    moveit_msgs::CollisionObject collision_target_object;
+    collision_target_object.id = "cup";
+    collision_target_object.header.frame_id = base_frame_;
+    collision_target_object.primitives.push_back(target_object);
+    collision_target_object.primitive_poses.push_back(bottle_pose);
+    collision_target_object.operation = moveit_msgs::CollisionObject::ADD;
+    addPSMCollisionObject(collision_target_object, getColor(169.0, 169.0, 169.0, 1.0));
+
+    target_attached_object_ = collision_target_object;
 
     break;
   }
@@ -975,6 +997,10 @@ bool RenboPlanner::updatePickPlacePose(const int& scenerio, Eigen::Affine3d& pic
 
   case 4:
     file_name = package_path.append("/database/scene_4.dat");
+    break;
+
+  case 5:
+    file_name = package_path.append("/database/scene_5.dat");
     break;
 
   case 9:
