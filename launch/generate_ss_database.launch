@@ -1,0 +1,24 @@
+<launch>
+
+  <arg name="debug" default="false"/>
+  <arg name="run_rviz" default="false" />
+
+  <!-- Load the URDF, SRDF and other .yaml configuration files on the param server -->
+  <include file="$(find renbo_whole_body_plan)/launch/planning_context_whole_body.launch">
+    <arg name="load_robot_description" value="true"/>
+  </include>
+
+	<node pkg="tf" type="static_transform_publisher" name="virtual_joint_broadcaster_0" args="0 0 0 0 0 0 odom_combined r_sole 0" />
+
+  <!--<node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+    <param name="use_gui" value="$(arg gui)"/>
+  </node> -->
+
+  <include if="$(arg run_rviz)" file="$(find renbo_whole_body_plan)/launch/ss_config_rviz.launch">
+    <arg name="config" value="true" />
+  </include>
+
+  <node name="generate_ss_database" pkg="renbo_whole_body_plan" type="generate_ss_database" cwd="node" output="screen">
+  </node> 
+
+</launch>

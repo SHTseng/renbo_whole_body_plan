@@ -4,14 +4,12 @@
 namespace renbo_constraint_sampler
 {
 
-StableConfigGenerator::StableConfigGenerator(const std::string &group_name, double scale_sp):
+StableConfigGenerator::StableConfigGenerator(const std::string &group_name, const double& scale_sp):
     nh_("~"),
     group_name_(group_name),
     support_mode_(DOUBLE_SUPPORT),
     verbose_(false)
 {
-  //ros::NodeHandle nh_private("~");
-
   robot_model_loader_.reset(new robot_model_loader::RobotModelLoader("robot_description"));
 
   robot_model_ = robot_model_loader_->getModel();
@@ -190,6 +188,86 @@ bool StableConfigGenerator::sampleDSConfig(int config_count, std::string file_de
   return true;
 }
 
+bool StableConfigGenerator::sampleSSConfig(const int& max_samples, const std::string& file_destination, bool write_pose)
+{
+  std::ofstream ss_database;
+  ss_database.open(file_destination.c_str(), std::ofstream::out|std::ios_base::app);
+  if (!ss_database)
+  {
+    ROS_ERROR("unable to open single support database");
+    return false;
+  }
+
+  robot_state::RobotState rstate(ps_->getRobotModel());
+  rstate = ps_->getCurrentStateNonConst();
+  rstate.setToDefaultValues();
+  moveit_msgs::DisplayRobotState rstate_msg;
+
+  // reset support mode to single
+  if (!initSupportPolygon(0.8))
+  {
+    ROS_ERROR_STREAM("Initial support polygon fail");
+    return false;
+  }
+
+  ros::Time start_time = ros::Time::now();
+  int config_cnt = 0, loop_cnt = 0;
+  while (config_cnt != max_samples)
+  {
+    whole_body_jmg_->getVariableRandomPositions(rng_, whole_body_joint_values_);
+    wb_jnt_pos_map_.clear();
+
+    for (int i = 0; i < whole_body_joint_names_.size(); i++)
+    {
+      wb_jnt_pos_map_.insert(std::pair<std::string, double>(whole_body_joint_names_[i], whole_body_joint_values_[i]));
+    }
+
+    rstate.setVariablePositions(wb_jnt_pos_map_);
+    rstate.update();
+
+    if (isFeasible(rstate))
+    {
+      rstate.copyJointGroupPositions(whole_body_jmg_, whole_body_joint_values_);
+      if(verbose_)
+      {
+        robot_state::robotStateToRobotStateMsg(rstate, rstate_msg.state);
+        visualization_msgs::Marker com_marker = getCOMMarker();
+        visualization_msgs::Marker p_com_marker = getPorjectedCOMMarker();
+        geometry_msgs::PolygonStamped foot_polygon = getSupportPolygon();
+        support_polygon_pub_.publish(foot_polygon);
+        robot_state_publisher_.publish(rstate_msg);
+        pcom_pub_.publish(p_com_marker);
+        com_pub_.publish(com_marker);
+
+        ros::Duration(5.0).sleep();
+      }
+
+      if (write_pose)
+      {
+        for (std::size_t i = 0; i < whole_body_joint_values_.size(); i++)
+        {
+          ss_database << whole_body_joint_values_[i];
+          ss_database << " ";
+        }
+        ss_database << "\n";
+      }
+      config_cnt++;
+    }
+
+    loop_cnt++;
+    if ((loop_cnt%10000) == 0)
+      ROS_INFO_STREAM("current loop count: " << loop_cnt << " config count: " << config_cnt);
+  }
+  ss_database.close();
+
+  ros::Time end_time = ros::Time::now();
+  ros::Duration dura = end_time - start_time;
+
+  ROS_INFO_STREAM("cost " << dura << " seconds to finish whole process");
+
+  return true;
+}
+
 bool StableConfigGenerator::computeRobotCoM(const robot_state::RobotState& state)
 {
 //  robot_state::RobotState robot_state_(ps_->getRobotModel());
@@ -357,7 +435,7 @@ bool StableConfigGenerator::isFeasible(const robot_state::RobotState& robot_stat
 
 }
 
-bool StableConfigGenerator::initSupportPolygon(double sp_scale)
+bool StableConfigGenerator::initSupportPolygon(const double& sp_scale)
 {
   std::string rfoot_mesh_link_name_ = "r_ankle";
   const boost::shared_ptr<const urdf::ModelInterface>& urdf_model_ = ps_->getRobotModel()->getURDF();
@@ -444,6 +522,7 @@ bool StableConfigGenerator::initSupportPolygon(double sp_scale)
 
   foot_support_polygon_right_ = convexHull(scaled_SP_right);
 
+  support_polygon_.clear();
   for (unsigned int i = 0 ; i < foot_support_polygon_right_.size() ; ++i)
   {
     support_polygon_.push_back(foot_support_polygon_right_[i]);
@@ -466,6 +545,8 @@ bool StableConfigGenerator::initSupportPolygon(double sp_scale)
       support_polygon_.push_back(foot_support_polygon_left_[i]);
     }
   }
+
+  ROS_INFO_STREAM("current support mode:" << support_mode_);
 
   support_polygon_ = convexHull(support_polygon_);
 
@@ -610,7 +691,7 @@ visualization_msgs::Marker StableConfigGenerator::getPorjectedCOMMarker() const
   return p_COM_marker;
 }
 
-geometry_msgs::PolygonStamped StableConfigGenerator::getSupportPolygon() const
+geometry_msgs::PolygonStamped StableConfigGenerator::getSupportPolygon()
 {
   geometry_msgs::PolygonStamped foot_print_polygon;
   foot_print_polygon.header.frame_id = "r_sole";

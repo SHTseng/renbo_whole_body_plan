@@ -20,8 +20,10 @@
 #include <rrt_planner_msgs/RRT_Planner_Test.h>
 #include <rrt_planner_msgs/Final_Pose_Planning.h>
 
-#include <renbo_msgs/generate_ss_config.h>
+#include <renbo_msgs/compute_com.h>
+#include <renbo_msgs/check_stability.h>
 #include <renbo_msgs/compute_motion_plan.h>
+#include <renbo_msgs/generate_ss_config.h>
 #include <renbo_msgs/generate_whole_body_posture.h>
 
 #include <renbo_whole_body_plan/stable_config_generator.h>
@@ -48,6 +50,9 @@ public:
 
   bool compute_robot_com(rrt_planner_msgs::Generate_DS_Configs::Request &req,
                          rrt_planner_msgs::Generate_DS_Configs::Response &res);
+
+  bool check_stability(renbo_msgs::check_stability::Request &req,
+                       renbo_msgs::check_stability::Response &res);
 
   bool generate_valid_config(renbo_msgs::generate_ss_config::Request &req,
                              renbo_msgs::generate_ss_config::Response &res);
@@ -163,7 +168,7 @@ private:
   int MAX_EXPAND_ITERATIONS;
   bool VISUALIZE_PLANNING_PATH;
 
-  std::string ds_database_path_;
+  std::string database_path_;
 
   int DS_CONFIG_COUNT;
 

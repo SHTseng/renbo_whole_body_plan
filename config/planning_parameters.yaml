@@ -1,14 +1,14 @@
 #-----  General Parameters
 planning_group: whole_body_fixed
 scale_sp: 1.0
-write_file: true
+write_file: false
 verbose: false
 test_flag: 2
 scenario: 0
 
 #------ file path
 scene_path: package://renbo_whole_body_plan/scene/
-file_path_DS_database: package://renbo_whole_body_plan/databse/ds_dataset.dat
+file_path_DS_database: package://renbo_whole_body_plan/database
 solution_file_path: package://renbo_whole_body_plan/trajectory/
      
 #------ Stable Config Generator   

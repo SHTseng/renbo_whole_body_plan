@@ -60,16 +60,10 @@ RenboPlanner::RenboPlanner():
 
   rviz_visual_tools_->enableBatchPublishing(true);
 
-  mg_rrt_.reset(new renbo_planner::MultiGoalRRTPlanner(PLANNING_GROUP, ds_database_path_, write_file_));
+//  mg_rrt_.reset(new renbo_planner::MultiGoalRRTPlanner(PLANNING_GROUP, ds_database_path_, write_file_));
 
-  mg_rrt_->setVerbose(verbose_);
-  mg_rrt_->setVisualizationSwtich(VISUALIZE_PLANNING_PATH);
-
-  rrt_.reset(new renbo_planner::RRTConnectPlanner(PLANNING_GROUP, ds_database_path_, write_file_));
-
-  rrt_->setVerbose(verbose_);
-
-  rrt_->setVisualizationSwtich(VISUALIZE_PLANNING_PATH);
+//  mg_rrt_->setVerbose(verbose_);
+//  mg_rrt_->setVisualizationSwtich(VISUALIZE_PLANNING_PATH);
 
   ROS_INFO_STREAM("Ready to start");
 }
@@ -88,7 +82,7 @@ bool RenboPlanner::generate_ds_database(
   scg_->setVerbose(verbose_);
   scg_->setSupportMode(support_mode);
 
-  if (!scg_->sampleDSConfig(DS_CONFIG_COUNT, ds_database_path_, write_file_))
+  if (!scg_->sampleDSConfig(DS_CONFIG_COUNT, database_path_, write_file_))
   {
     ROS_ERROR("Could not generate stable config");
     exit(1);
@@ -129,110 +123,6 @@ bool RenboPlanner::generate_valid_config(
 
   res.result = 1;
   return true;
-}
-
-
-bool RenboPlanner::rrt_planner_test(rrt_planner_msgs::compute_motion_plan::Request &req, rrt_planner_msgs::compute_motion_plan::Response &res)
-{
-  scenario_ = req.scenerio;
-  rviz_visual_tools_->deleteAllMarkers();
-
-  loadCollisionEnvironment(scenario_);
-
-  robot_state::RobotState robot_state_ = psm_->getPlanningScene()->getCurrentStateNonConst();
-  robot_state_.setToDefaultValues();
-  robot_state_.update();
-
-//  updatePSMRobotState(robot_state_);
-
-  eef_original_config_ = robot_state_.getGlobalLinkTransform(eef_name_);
-  waist_original_config_ = robot_state_.getGlobalLinkTransform(waist_name_);
-
-  Eigen::Affine3d eef_pick_pose, eef_place_pose, waist_pick_pose, waist_place_pose;
-  if (!updatePickPlacePose(scenario_, eef_pick_pose, eef_place_pose, waist_pick_pose, waist_place_pose))
-  {
-    ROS_INFO_STREAM("Can't update pick and place poses");
-    return false;
-  }
-
-  fpp_->updateScene(psm_->getPlanningScene());
-
-  ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "RRT planner: Start pick planning");
-
-  std::vector<double> pick_config(wb_jmg_->getVariableCount());
-  bool final_pose_flag = fpp_->solveFinalPose(robot_state_, eef_pick_pose, waist_pick_pose, pick_config);
-  if (!final_pose_flag)
-  {
-    ROS_INFO_STREAM("Solve pick pose fail");
-    return false;
-  }
-
-  ROS_INFO_STREAM("Solved pick pose");
-
-  std::vector<double> place_config(wb_jmg_->getVariableCount());
-  final_pose_flag = fpp_->solveFinalPose(robot_state_, eef_place_pose, waist_place_pose, place_config);
-  if (!final_pose_flag)
-  {
-    ROS_INFO_STREAM("Solve place pose fail");
-    return false;
-  }
-
-  ROS_INFO_STREAM("Solved place pose");
-
-//  robot_state_.setVariablePositions(wb_joint_names_, place_config);
-//  robot_state_.update();
-//  updatePSMRobotState(robot_state_);
-
-
-  Eigen::Affine3d grasp_object_pose;
-  grasp_object_pose = robot_state_.getGlobalLinkTransform(eef_name_);
-  grasp_object_pose.rotate(Eigen::AngleAxisd(M_PI/2, Eigen::Vector3d::UnitY()));
-  Eigen::Vector3d transformed_translation = grasp_object_pose.rotation() * Eigen::Vector3d(0.0, -0.16, 0.0);
-  grasp_object_pose.translation() += transformed_translation;
-
-  shape_msgs::SolidPrimitive target_object;
-  target_object.type = target_object.CYLINDER;
-  target_object.dimensions.resize(2);
-  target_object.dimensions[0] = 0.15;
-  target_object.dimensions[1] = 0.025;
-
-  geometry_msgs::Pose pose;
-  tf::poseEigenToMsg(grasp_object_pose, pose);
-
-  moveit_msgs::CollisionObject collision_target_object;
-  collision_target_object.id = "cup";
-  collision_target_object.header.frame_id = base_frame_;
-  collision_target_object.primitives.push_back(target_object);
-  collision_target_object.primitive_poses.push_back(pose);
-  collision_target_object.operation = moveit_msgs::CollisionObject::ADD;
-
-  addPSMCollisionObject(collision_target_object, getColor(169.0, 169.0, 169.0, 1.0));
-  ROS_INFO_STREAM("Add target collision object to scene");
-
-  moveit_msgs::AttachedCollisionObject attached_object;
-  attached_object.object = collision_target_object;
-  attached_object.link_name = eef_name_;
-
-
-  rrt_->is_grasped = false;
-
-  rrt_->updateEnvironment(psm_->getPlanningScene());
-
-  std::vector<double> initial_configuration(wb_jmg_->getVariableCount());
-  rrt_->setStartGoalConfigs(initial_configuration, place_config);
-
-  rrt_->setAttachCollsionObject(attached_object);
-  rrt_->TEST(test_flag_);
-
-//  moveit_msgs::DisplayTrajectory display_trajectory_ = rrt_->solveQuery(20000, 0.1);
-//  trajectory_publisher_.publish(display_trajectory_);
-
-  rrt_->is_grasped = false;
-
-  res.success = true;
-
-  return true;
-
 }
 
 bool RenboPlanner::final_pose_planning(rrt_planner_msgs::Final_Pose_Planning::Request &req, rrt_planner_msgs::Final_Pose_Planning::Response &res)
@@ -415,6 +305,10 @@ bool RenboPlanner::pick_place_motion_plan(renbo_msgs::compute_motion_plan::Reque
   //RRT-Connect path planning, initial state to goal state
   std::vector<double> initial_configuration(wb_jmg_->getVariableCount());
 
+  rrt_.reset(new renbo_planner::RRTConnectPlanner(PLANNING_GROUP, database_path_, req.support_mode, write_file_));
+  rrt_->setVerbose(verbose_);
+  rrt_->setVisualizationSwtich(VISUALIZE_PLANNING_PATH);
+
   rrt_->updateEnvironment(psm_->getPlanningScene());
   rrt_->setStartGoalConfigs(initial_configuration, pick_config);
   if (req.attach_object == 1)
@@ -442,7 +336,8 @@ bool RenboPlanner::pick_place_motion_plan(renbo_msgs::compute_motion_plan::Reque
 bool RenboPlanner::BiRRT_motion_plan(renbo_msgs::compute_motion_plan::Request &req,
                                      renbo_msgs::compute_motion_plan::Response &res)
 {
-  loadCollisionEnvironment(req.scenario);
+  loadCollisionEnvironment((int)req.scenario);
+  ROS_INFO_STREAM("load scenario " << (int)req.scenario);
 
   robot_state::RobotState initial_state = psm_->getPlanningScene()->getCurrentStateNonConst();
   initial_state.setVariablePositions(wb_joint_names_, req.initial_config);
@@ -452,12 +347,23 @@ bool RenboPlanner::BiRRT_motion_plan(renbo_msgs::compute_motion_plan::Request &r
   goal_state.setVariablePositions(wb_joint_names_, req.goal_config);
   goal_state.update();
 
-  if (!checkCollision(initial_state) || !checkCollision(goal_state))
+  if (!checkCollision(initial_state))
   {
-    ROS_ERROR("start config or goal config is in collision");
+    ROS_ERROR("start config is in collision");
     res.success = 0;
     return false;
   }
+
+  if (!checkCollision(goal_state))
+  {
+    ROS_ERROR("goal config is in collision");
+    res.success = 0;
+    return false;
+  }
+
+  rrt_.reset(new renbo_planner::RRTConnectPlanner(PLANNING_GROUP, database_path_, req.support_mode, write_file_));
+  rrt_->setVerbose(verbose_);
+  rrt_->setVisualizationSwtich(VISUALIZE_PLANNING_PATH);
 
   rrt_->updateEnvironment(psm_->getPlanningScene());
   rrt_->setStartGoalConfigs(req.initial_config, req.goal_config);
@@ -475,7 +381,7 @@ bool RenboPlanner::BiRRT_motion_plan(renbo_msgs::compute_motion_plan::Request &r
     ROS_INFO("planning robot motion without attached object");
   }
 
-  moveit_msgs::DisplayTrajectory display_trajectory = rrt_->solveQuery(20000, 0.1);
+  moveit_msgs::DisplayTrajectory display_trajectory = rrt_->solveQuery(20000, 0.08);
   init_pick_trajectory_pub_.publish(display_trajectory);
   ros::Duration(0.5).sleep();
 
@@ -865,6 +771,27 @@ void RenboPlanner::loadCollisionEnvironment(int type)
 
     break;
   }
+  case 6:
+  {
+    // empty space with floor
+    shape_msgs::SolidPrimitive floor;
+    floor.type = floor.BOX;
+    floor.dimensions.resize(3);
+    floor.dimensions[0] = 2.0;
+    floor.dimensions[1] = 2.0;
+    floor.dimensions[2] = 0.05;
+
+    geometry_msgs::Pose floor_pose = getGeometryPose(0.0, 0.0, -0.035, 1.0, 0.0, 0.0, 0.0);
+    moveit_msgs::CollisionObject collision_box;
+    collision_box.id = "floor";
+    collision_box.header.frame_id = "r_sole";
+    collision_box.primitives.push_back(floor);
+    collision_box.primitive_poses.push_back(floor_pose);
+    collision_box.operation = collision_box.ADD;
+    addPSMCollisionObject(collision_box, getColor(169.0, 169.0, 169.0, 1.0));
+
+    break;
+  }
   case 9:
   {
     ROS_INFO("load empty space");
@@ -1104,7 +1031,7 @@ void RenboPlanner::loadYamlParameter()
   nh_.param("rrt_time_out", TIME_OUT, 60.0);
 
   // file paths
-  nh_.param("file_path_DS_database", ds_database_path_, std::string("package://renbo_whole_body_plan/database/ds_dataset.dat"));
+  nh_.param("file_path_DS_database", database_path_, std::string("package://renbo_whole_body_plan/database"));
   nh_.param("scene_path", scene_path_, std::string("package://renbo_whole_body_plan/scene/"));
 
   nh_.param("solution_file_path", solution_file_path_, std::string("package://renbo_whole_body_plan/trajectory/"));

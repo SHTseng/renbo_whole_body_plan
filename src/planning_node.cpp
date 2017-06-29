@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
 
   ros::ServiceServer pick_place_motion_plan = nh.advertiseService("pick_place_motion_plan", &RenboPlanner::pick_place_motion_plan, &renbo_planner_);
 
-  ros::ServiceServer multi_goal_rrt_planner = nh.advertiseService("multi_goal_rrt_planner", &RenboPlanner::multi_goal_rrt_planner, &renbo_planner_);
+  //ros::ServiceServer multi_goal_rrt_planner = nh.advertiseService("multi_goal_rrt_planner", &RenboPlanner::multi_goal_rrt_planner, &renbo_planner_);
 
   ros::spin();
 

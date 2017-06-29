@@ -10,9 +10,10 @@
 namespace renbo_planner
 {
 
-RRTConnectPlanner::RRTConnectPlanner(std::string group_name, std::string database_pth, bool write_file):
+RRTConnectPlanner::RRTConnectPlanner(std::string group_name, std::string database_pth, const int& support_mode, bool write_file):
   nh_("~"),
   group_name_(group_name),
+  support_mode_(support_mode),
   database_path_(database_pth),
   visualize_path_(false),
   base_frame_("r_sole"),
@@ -38,9 +39,14 @@ RRTConnectPlanner::RRTConnectPlanner(std::string group_name, std::string databas
 
   wb_num_joint_ = wb_joint_names_.size();
 
-//  tree_start_.name = "start_tree";
-
-//  tree_goal_.name= "goal_tree";
+  if (support_mode_ == 0)
+  {
+    database_path_.append("/ds_dataset.dat");
+  }
+  else if (support_mode_ == 1)
+  {
+    database_path_.append("/ss_dataset.dat");
+  }
 
   robot_state_publisher_ = nh_.advertise<moveit_msgs::DisplayRobotState>("renbo_robot_state", 1);
 
@@ -284,7 +290,6 @@ status RRTConnectPlanner::extendTree(tree &input_tree, node q_rand, node &q_near
 {
   status stat = ADVANCED;
   node q_new, q_new_modified;
-  bool enforce_ds = false;
 
   robot_state::RobotState robot_state_ = ps_->getCurrentStateNonConst();
 //  robot_state::RobotState robot_state_ = attached_robot_state_;
@@ -305,19 +310,26 @@ status RRTConnectPlanner::extendTree(tree &input_tree, node q_rand, node &q_near
       wb_jnt_pos_map_.insert(std::pair<std::string, double>(wb_joint_names_[i], q_new.config[i]));
     }
 
-    wb_jnt_pos_map_["head_yaw_joint"] = 0.0;
-    wb_jnt_pos_map_["head_pitch_joint"] = 0.0;
-    wb_jnt_pos_map_["l_shoulder_pitch_joint"] = -0.785;
-    wb_jnt_pos_map_["l_shoulder_roll_joint"] = 0.0;
-    wb_jnt_pos_map_["l_shoulder_yaw_joint"] = 0.0;
-    wb_jnt_pos_map_["l_elbow_joint"] = 1.0472;
-    wb_jnt_pos_map_["l_wrist_yaw_joint"] = 0.0;
-    wb_jnt_pos_map_["l_wrist_pitch_joint"] = -0.523;
+    if (support_mode_ == 0)
+    {
+      wb_jnt_pos_map_["head_yaw_joint"] = 0.0;
+      wb_jnt_pos_map_["head_pitch_joint"] = 0.0;
+      wb_jnt_pos_map_["l_shoulder_pitch_joint"] = -0.785;
+      wb_jnt_pos_map_["l_shoulder_roll_joint"] = 0.0;
+      wb_jnt_pos_map_["l_shoulder_yaw_joint"] = 0.0;
+      wb_jnt_pos_map_["l_elbow_joint"] = 1.0472;
+      wb_jnt_pos_map_["l_wrist_yaw_joint"] = 0.0;
+      wb_jnt_pos_map_["l_wrist_pitch_joint"] = -0.523;
+    }
 
     state.setVariablePositions(wb_jnt_pos_map_);
     state.update();
 
-    enforce_ds = ds_constraint_.enforceDSLeftLeg(state, l_leg_jmg_);
+    bool enforce_ds = false;
+    if (support_mode_ == 0)
+      enforce_ds = ds_constraint_.enforceDSLeftLeg(state, l_leg_jmg_);
+    else
+      enforce_ds = true;
 
     if (!enforce_ds)
     {
@@ -325,7 +337,6 @@ status RRTConnectPlanner::extendTree(tree &input_tree, node q_rand, node &q_near
       {
         ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "extend tree: can't enforce double support phase");
       }
-
       stat = TRAPPED;
     }
     else
@@ -1028,7 +1039,7 @@ bool RRTConnectPlanner::loadDSDatabase(std::string path)
   std::vector<double> config;
   double q_in;
 
-  ROS_INFO_STREAM_NAMED("rrt_planner", MOVEIT_CONSOLE_COLOR_CYAN << "Loading double support database..." << MOVEIT_CONSOLE_COLOR_RESET);
+  ROS_INFO_STREAM_NAMED("rrt_planner", MOVEIT_CONSOLE_COLOR_CYAN << "Loading database config..." << MOVEIT_CONSOLE_COLOR_RESET);
 
   std::ifstream ds_config_file;
   ds_config_file.open(path.c_str());
@@ -1521,7 +1532,7 @@ void RRTConnectPlanner::PAUSE()
 }
 
 MultiGoalRRTPlanner::MultiGoalRRTPlanner(std::string group_name, std::string database_pth, bool write_file)
-  : RRTConnectPlanner(group_name, database_pth, write_file)
+  : RRTConnectPlanner(group_name, database_pth, 0, write_file)
 {
 
 }

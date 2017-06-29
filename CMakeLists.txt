@@ -64,13 +64,6 @@ set(rrt_connect_planner_files
 add_library(${PROJECT_NAME} ${rrt_connect_planner_files})
 target_link_libraries(${PROJECT_NAME}
     ${catkin_LIBRARIES}
-#    drakeCommon
-#    drakeJoints
-#    drakeIK
- #   drakeMultibodyParsers
- #   drakeRBM
- #   drakeRigidBodyPlant
- #   drakeRigidBodyConstraint
 )
 add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
 
@@ -80,8 +73,11 @@ target_link_libraries(planning_node ${PROJECT_NAME})
 add_executable(whole_body_plan_demo demo/whole_body_plan_demo.cpp)
 target_link_libraries(whole_body_plan_demo ${PROJECT_NAME})
 
-add_executable(compute_com src/test/compute_com.cpp)
+add_executable(compute_com src/util/compute_com.cpp)
 target_link_libraries(compute_com ${PROJECT_NAME})
+
+add_executable(generate_ss_database src/util/generate_ss_database.cpp)
+target_link_libraries(generate_ss_database ${PROJECT_NAME})
 
 add_executable(plan_single_path demo/plan_single_path.cpp)
 target_link_libraries(plan_single_path ${PROJECT_NAME})
@@ -94,4 +90,8 @@ target_link_libraries(generate_grasping_posture ${PROJECT_NAME})
 
 add_executable(visualize_trajectory demo/visualize_trajectory.cpp)
 target_link_libraries(visualize_trajectory ${PROJECT_NAME})
+
+add_executable(ss_motion_plan demo/ss_motion_plan.cpp)
+target_link_libraries(ss_motion_plan ${PROJECT_NAME})
+
 

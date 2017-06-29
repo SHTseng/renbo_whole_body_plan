@@ -40,7 +40,7 @@ public:
 
   enum FootSupport {DOUBLE_SUPPORT, SINGLE_SUPPORT_RIGHT, SINGLE_SUPPORT_LEFT};
 
-  StableConfigGenerator(const std::string &group_name, double scale_sp);
+  StableConfigGenerator(const std::string &group_name, const double& scale_sp);
 
   virtual ~StableConfigGenerator();
 
@@ -52,7 +52,7 @@ public:
   /*
    * sample valid single support configuration
   */
-  bool sampleSSConfig(int max_samples, std::string file_destination);
+  bool sampleSSConfig(const int& max_samples, const std::string& file_destination, bool write_pose);
 
   bool computeRobotCoM(const robot_state::RobotState& state);
 
@@ -77,7 +77,7 @@ private:
 
   bool isStaticallyStable(const tf::Point &point, const std::vector<tf::Point> &polygon);
 
-  bool initSupportPolygon(double sp_scale);
+  bool initSupportPolygon(const double& sp_scale);
 
   std::vector<tf::Point> convexHull(const std::vector<tf::Point>& input_pts) const;
 
@@ -89,7 +89,7 @@ private:
 
   void writePose();
 
-  geometry_msgs::PolygonStamped getSupportPolygon() const;
+  geometry_msgs::PolygonStamped getSupportPolygon();
 
   visualization_msgs::Marker getCOMMarker() const;
 

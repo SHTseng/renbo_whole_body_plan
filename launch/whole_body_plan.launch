@@ -22,9 +22,9 @@
 
   <node name="whole_body_plan" pkg="renbo_whole_body_plan" type="planning_node" cwd="node" output="screen">
     <rosparam command="load" file="$(find renbo_whole_body_plan)/config/planning_parameters.yaml"/>
-		<param name="file_path_DS_database" value="$(find renbo_whole_body_plan)/database/ds_dataset.dat" />
+		<param name="file_path_DS_database" value="$(find renbo_whole_body_plan)/database" />
   </node>
 
-  <node name="grasping_posture_generator" pkg="renbo_grasp_generator" type="posture_generator_node" cwd="node" output="screen" />
+  <!--node name="grasping_posture_generator" pkg="renbo_grasp_generator" type="posture_generator_node" cwd="node" output="screen" /-->
 
 </launch>

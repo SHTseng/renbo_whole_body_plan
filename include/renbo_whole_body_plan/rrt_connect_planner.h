@@ -61,7 +61,7 @@ class RRTConnectPlanner
 {
 public:
 
-  RRTConnectPlanner(std::string group_name, std::string database_pth, bool write_file);
+  RRTConnectPlanner(std::string group_name, std::string database_pth, const int& support_mode, bool write_file);
 
   virtual ~RRTConnectPlanner();
 
@@ -176,6 +176,8 @@ protected:
   int wb_num_joint_;
 
   std::map<std::string, double> wb_jnt_pos_map_;
+
+  int support_mode_;
 
   std::string database_path_;
 

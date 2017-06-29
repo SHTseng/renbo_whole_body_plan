@@ -118,6 +118,7 @@ int main(int argc, char* argv[])
     renbo_msgs::compute_motion_plan pick_place_motion_plan_srv;
 
     pick_place_motion_plan_srv.request.scenario = SCENERIO;
+    pick_place_motion_plan_srv.request.support_mode = 0;
 
     if (pick_place_motion_plan_.call(pick_place_motion_plan_srv))
     {
@@ -128,7 +129,6 @@ int main(int argc, char* argv[])
       ROS_ERROR("pick and place motion plan fail");
       exit(1);
     }
-
   }
 
   ros::shutdown();

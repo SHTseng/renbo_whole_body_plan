@@ -9,7 +9,7 @@ Panels:
         - /PlanningScene1/Scene Robot1
         - /MarkerArray4
       Splitter Ratio: 0.564023972
-    Tree Height: 893
+    Tree Height: 891
   - Class: rviz/Help
     Name: Help
   - Class: rviz/Views
@@ -24,7 +24,7 @@ Visualization Manager:
       Cell Size: 1
       Class: rviz/Grid
       Color: 160; 160; 164
-      Enabled: true
+      Enabled: false
       Line Style:
         Line Width: 0.0299999993
         Value: Lines
@@ -37,7 +37,7 @@ Visualization Manager:
       Plane: XY
       Plane Cell Count: 10
       Reference Frame: r_sole
-      Value: true
+      Value: false
     - Attached Body Color: 0; 255; 0
       Class: moveit_rviz_plugin/RobotState
       Collision Enabled: false
@@ -228,7 +228,7 @@ Visualization Manager:
     - Attached Body Color: 150; 50; 150
       Class: moveit_rviz_plugin/RobotState
       Collision Enabled: false
-      Enabled: true
+      Enabled: false
       Links:
         All Links Enabled: true
         Expand Joint Details: false
@@ -410,7 +410,7 @@ Visualization Manager:
       Robot State Topic: /whole_body_plan/goal_state
       Show All Links: true
       Show Highlights: true
-      Value: true
+      Value: false
       Visual Enabled: true
     - Attached Body Color: 150; 50; 150
       Class: moveit_rviz_plugin/RobotState
@@ -636,7 +636,7 @@ Visualization Manager:
       Marker Topic: /whole_body_plan/planned_path_marker
       Name: MarkerArray
       Namespaces:
-        {}
+        Cylinder: true
       Queue Size: 100
       Value: true
     - Class: moveit_rviz_plugin/PlanningScene
@@ -1014,7 +1014,7 @@ Visualization Manager:
           Value: true
       Loop Animation: true
       Name: Trajectory
-      Robot Alpha: 0.5
+      Robot Alpha: 1
       Robot Color: 150; 50; 150
       Robot Description: robot_description
       Show Robot Collision: false
@@ -1236,7 +1236,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 3.6371901
+      Distance: 2.8166399
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
@@ -1250,10 +1250,10 @@ Visualization Manager:
       Focal Shape Size: 0.0500000007
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.415200859
+      Pitch: 0.625200272
       Target Frame: base_footprint
       Value: XYOrbit (rviz)
-      Yaw: 5.70924711
+      Yaw: 0.139231086
     Saved: ~
 Window Geometry:
   Displays:
@@ -1263,7 +1263,9 @@ Window Geometry:
     collapsed: false
   Hide Left Dock: false
   Hide Right Dock: false
-  QMainWindow State: 000000ff00000000fd0000000200000000000001c6000003befc0200000005fb000000100044006900730070006c0061007900730100000028000003be000000dd00fffffffb0000000800480065006c00700000000342000000bb0000007600fffffffb0000000a0056006900650077007300000003b0000000b0000000b000fffffffb0000000c00430061006d00650072006100000002ff000001610000000000000000fb0000001e004d006f00740069006f006e00200050006c0061006e006e0069006e0067000000020f000001d70000000000000000000000030000047c000001f4fc0100000001fb0000001e004d006f00740069006f006e00200050006c0061006e006e0069006e006701000002a80000047c000000000000000000000558000003be00000001000000020000000100000002fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000200000000000001c6000003bdfc0200000007fb000000100044006900730070006c0061007900730100000028000003bd000000de00fffffffb0000000800480065006c00700000000342000000bb0000007600fffffffb0000000a0056006900650077007300000003b0000000b0000000b200fffffffb0000000c00430061006d00650072006100000002ff000001610000000000000000fb0000001e004d006f00740069006f006e00200050006c0061006e006e0069006e0067000000020f000001d70000000000000000fb00000026005400720061006a006500630074006f007200790020002d00200053006c00690064006500720000000000ffffffff0000004a00fffffffb00000026005400720061006a006500630074006f007200790020002d00200053006c00690064006500720000000000ffffffff0000004a00ffffff000000030000047c000001f4fc0100000001fb0000001e004d006f00740069006f006e00200050006c0061006e006e0069006e006701000002a80000047c000000000000000000000558000003bd00000001000000020000000100000002fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  Trajectory - Slider:
+    collapsed: false
   Views:
     collapsed: false
   Width: 1828
