@@ -51,6 +51,7 @@ set(rrt_connect_planner_files
   src/renbo_planner.cpp
   src/double_support_constraint.cpp
   src/final_pose_planner.cpp
+	src/stability_checker.cpp
 #  src/nlp_ik_solver.cpp
 
   include/renbo_whole_body_plan/stable_config_generator.h
@@ -58,6 +59,7 @@ set(rrt_connect_planner_files
   include/renbo_whole_body_plan/renbo_planner.h
   include/renbo_whole_body_plan/double_support_constraint.h
   include/renbo_whole_body_plan/final_pose_planner.h
+	include/renbo_whole_body_plan/stability_checker.h
  # include/renbo_whole_body_plan/nlp_ik_solver.h
 )
 

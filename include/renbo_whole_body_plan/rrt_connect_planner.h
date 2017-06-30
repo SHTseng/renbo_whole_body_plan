@@ -20,9 +20,8 @@
 #include <moveit_msgs/DisplayTrajectory.h>
 #include <moveit_msgs/AttachedCollisionObject.h>
 
+#include <renbo_whole_body_plan/stability_checker.h>
 #include <renbo_whole_body_plan/double_support_constraint.h>
-
-#include <hrl_kinematics/TestStability.h>
 
 #include <tf/transform_listener.h>
 #include <tf_conversions/tf_kdl.h>
@@ -198,6 +197,8 @@ protected:
   moveit_msgs::AttachedCollisionObject attached_collision_object_;
 
   renbo_constraint_sampler::DoubleSupportConstraint ds_constraint_;
+
+  std::unique_ptr<StabilityChecker> stability_checker_;
 
   rviz_visual_tools::RvizVisualToolsPtr rviz_visual_tools_;
 

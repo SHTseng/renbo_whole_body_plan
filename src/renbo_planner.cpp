@@ -347,6 +347,10 @@ bool RenboPlanner::BiRRT_motion_plan(renbo_msgs::compute_motion_plan::Request &r
   goal_state.setVariablePositions(wb_joint_names_, req.goal_config);
   goal_state.update();
 
+  moveit_msgs::DisplayRobotState robot_state_msg_;
+  robot_state::robotStateToRobotStateMsg(goal_state, robot_state_msg_.state);
+  goal_state_pub_.publish(robot_state_msg_);
+
   if (!checkCollision(initial_state))
   {
     ROS_ERROR("start config is in collision");

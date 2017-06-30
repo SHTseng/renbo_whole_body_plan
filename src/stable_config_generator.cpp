@@ -24,8 +24,6 @@ StableConfigGenerator::StableConfigGenerator(const std::string &group_name, cons
 
   whole_body_joint_names_ = whole_body_jmg_->getActiveJointModelNames();
 
-  //support_mode_ = DOUBLE_SUPPORT;
-
   robot_state_publisher_ = nh_.advertise<moveit_msgs::DisplayRobotState>("renbo_robot_state", 1);
 
   goal_state_publisher_ = nh_.advertise<moveit_msgs::DisplayRobotState>("goal_state", 1);
@@ -291,13 +289,13 @@ bool StableConfigGenerator::computeRobotCoM(const robot_state::RobotState& state
 
   computeCOMRecurs(kdl_tree_.getRootSegment(), joint_positions_map, ident);
 
-  if (totoal_mass_ < 0.0)
+  if (total_mass_ < 0.0)
   {
     ROS_WARN("Total mass less than 0");
     com_.setValue(0.0, 0.0, 0.0);
   }
 
-  com = com * 1.0/totoal_mass_;
+  com = com * 1.0/total_mass_;
   com_.setValue(com.x(), com.y(), com.z());
 
   p_com_ = com_;
@@ -598,24 +596,23 @@ void StableConfigGenerator::computeCOM()
 
   computeCOMRecurs(kdl_tree_.getRootSegment(), wb_jnt_pos_map_, ident);
 
-  if (totoal_mass_ < 0.0)
+  if (total_mass_ < 0.0)
   {
     ROS_WARN("Total mass less than 0");
     com_.setValue(0.0, 0.0, 0.0);
   }
 
-  com = com * 1.0/totoal_mass_;
+  com = com * 1.0/total_mass_;
   com_.setValue(com.x(), com.y(), com.z());
 
   p_com_ = com_;
   p_com_.setZ(0.0);
-  totoal_mass_ = 0.0;
+  total_mass_ = 0.0;
 }
 
 void StableConfigGenerator::computeCOMRecurs(const KDL::SegmentMap::const_iterator &current_seg, const std::map<std::string, double>& joint_positions, const KDL::Frame& prev_frame)
 {
   double jnt_p = 0.0;
-
   if (current_seg->second.segment.getJoint().getType() != KDL::Joint::None)
   {
     std::map<std::string, double>::const_iterator jnt = joint_positions.find(current_seg->second.segment.getJoint().getName());
@@ -634,7 +631,7 @@ void StableConfigGenerator::computeCOMRecurs(const KDL::SegmentMap::const_iterat
   KDL::Vector COM_current = current_seg->second.segment.getInertia().getCOG();
 
   com = com + mass_current * (current_frame * COM_current);
-  totoal_mass_ += mass_current;
+  total_mass_ += mass_current;
 
 //  ROS_INFO_STREAM("At link: " << current_seg->first.c_str() << " mass: " << mass_current << "\n global frame: "
 //                  << com.x() << " " << com.y() << " " << com.z() <<
@@ -645,7 +642,6 @@ void StableConfigGenerator::computeCOMRecurs(const KDL::SegmentMap::const_iterat
   {
     computeCOMRecurs(*child_it, joint_positions, current_frame);
   }
-
 }
 
 visualization_msgs::Marker StableConfigGenerator::getCOMMarker() const
@@ -781,13 +777,13 @@ bool StableConfigGenerator::test()
 
   computeCOMRecurs(kdl_tree_.getRootSegment(), joint_positions_map, ident);
 
-  if (totoal_mass_ < 0.0)
+  if (total_mass_ < 0.0)
   {
     ROS_WARN("Total mass less than 0");
     com_.setValue(0.0, 0.0, 0.0);
   }
 
-  com = com * 1.0/totoal_mass_;
+  com = com * 1.0/total_mass_;
   com_.setValue(com.x(), com.y(), com.z());
 
   p_com_ = com_;

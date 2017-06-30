@@ -46,19 +46,32 @@ std::vector<double> read_config_from_traj_file(const std::string& file_name, con
     exit(1);
   }
 
-  int cnt = 0;
-  std::vector<double> config;
-  std::string str;
-  while (1)
+  int time_frame = 0;
+  input_file >> time_frame;
+
+  std::vector<double> config(33, 0);
+  double tmp = 0.0;
+  for (int i = 0; i < 33; i++)
   {
-    std::getline(input_file, str);
-    if (cnt == pt)
+    int cnt = 0;
+    if ( i==3 || i==5 || i==8 || i==11 || i>=19)
     {
-      std::istringstream in(str);
-      std::copy(std::istream_iterator<double>(in), std::istream_iterator<double>(), std::back_inserter(config));
-      break;
+      for (int j = 0; j < time_frame; j++)
+      {
+        if (!input_file.eof())
+        {
+          if (cnt == pt)
+          {
+            input_file >> config[i];
+          }
+          else
+          {
+            input_file >> tmp;
+          }
+          cnt++;
+        }
+      }
     }
-    cnt++;
   }
 
   input_file.close();
@@ -79,9 +92,14 @@ int main(int argc, char* argv[])
   ss_motion_plan_srv.request.scenario = 6; // empty space
   ss_motion_plan_srv.request.support_mode = 1;
 
-  std::vector<double> initial_config(29, 0);
-//  ss_motion_plan_srv.request.initial_config = read_config_from_traj_file("goal_1.txt", 950);
-  ss_motion_plan_srv.request.initial_config = initial_config;
+//  std::vector<double> initial_config(29, 0);
+  std::vector<double> pose_1 = read_config_from_traj_file("goal_1.txt", 1400);
+  pose_1[17] = 0.0;
+  pose_1[18] = -0.785;
+  pose_1[23] = 0.0;
+  pose_1[24] = 0.785;
+
+  ss_motion_plan_srv.request.initial_config = pose_1;
   ss_motion_plan_srv.request.goal_config = read_config_from_pose_file("goal_2.txt");
 
   if (ss_motion_plan.call(ss_motion_plan_srv))
@@ -133,7 +151,7 @@ std::vector<double> wholeBodyJointMapping(std::vector<double> data)
   wb_joints[8] = data[29]*(-1);
   wb_joints[9] = data[30]*(-1);
   wb_joints[10] = data[31]*(-1);
-  wb_joints[11] = data[32]*(-1);
+  wb_joints[11] = data[32];
 
   // torso
   wb_joints[12] = data[19]*(-1);

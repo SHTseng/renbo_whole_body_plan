@@ -46,6 +46,7 @@ RRTConnectPlanner::RRTConnectPlanner(std::string group_name, std::string databas
   else if (support_mode_ == 1)
   {
     database_path_.append("/ss_dataset.dat");
+    stability_checker_.reset(new StabilityChecker(support_mode_, 0.8));
   }
 
   robot_state_publisher_ = nh_.advertise<moveit_msgs::DisplayRobotState>("renbo_robot_state", 1);
@@ -310,10 +311,10 @@ status RRTConnectPlanner::extendTree(tree &input_tree, node q_rand, node &q_near
       wb_jnt_pos_map_.insert(std::pair<std::string, double>(wb_joint_names_[i], q_new.config[i]));
     }
 
+    wb_jnt_pos_map_["head_yaw_joint"] = 0.0;
+    wb_jnt_pos_map_["head_pitch_joint"] = 0.0;
     if (support_mode_ == 0)
     {
-      wb_jnt_pos_map_["head_yaw_joint"] = 0.0;
-      wb_jnt_pos_map_["head_pitch_joint"] = 0.0;
       wb_jnt_pos_map_["l_shoulder_pitch_joint"] = -0.785;
       wb_jnt_pos_map_["l_shoulder_roll_joint"] = 0.0;
       wb_jnt_pos_map_["l_shoulder_yaw_joint"] = 0.0;
@@ -329,14 +330,11 @@ status RRTConnectPlanner::extendTree(tree &input_tree, node q_rand, node &q_near
     if (support_mode_ == 0)
       enforce_ds = ds_constraint_.enforceDSLeftLeg(state, l_leg_jmg_);
     else
-      enforce_ds = true;
+      enforce_ds = stability_checker_->isStable(state);
 
     if (!enforce_ds)
     {
-      if(verbose_)
-      {
-        ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "extend tree: can't enforce double support phase");
-      }
+      ROS_INFO_STREAM(MOVEIT_CONSOLE_COLOR_GREEN << "extend tree: can't enforce double support phase or unstable poses");
       stat = TRAPPED;
     }
     else

@@ -228,7 +228,7 @@ Visualization Manager:
     - Attached Body Color: 150; 50; 150
       Class: moveit_rviz_plugin/RobotState
       Collision Enabled: false
-      Enabled: false
+      Enabled: true
       Links:
         All Links Enabled: true
         Expand Joint Details: false
@@ -410,7 +410,7 @@ Visualization Manager:
       Robot State Topic: /whole_body_plan/goal_state
       Show All Links: true
       Show Highlights: true
-      Value: false
+      Value: true
       Visual Enabled: true
     - Attached Body Color: 150; 50; 150
       Class: moveit_rviz_plugin/RobotState
@@ -636,7 +636,7 @@ Visualization Manager:
       Marker Topic: /whole_body_plan/planned_path_marker
       Name: MarkerArray
       Namespaces:
-        Cylinder: true
+        {}
       Queue Size: 100
       Value: true
     - Class: moveit_rviz_plugin/PlanningScene
@@ -1236,7 +1236,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 2.8166399
+      Distance: 3.53319311
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
@@ -1250,10 +1250,10 @@ Visualization Manager:
       Focal Shape Size: 0.0500000007
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.625200272
+      Pitch: 0.370200515
       Target Frame: base_footprint
       Value: XYOrbit (rviz)
-      Yaw: 0.139231086
+      Yaw: 0.0642316714
     Saved: ~
 Window Geometry:
   Displays:

@@ -8,9 +8,6 @@
 
 #include <moveit_msgs/DisplayRobotState.h>
 
-#include <hrl_kinematics/TestStability.h>
-#include <hrl_kinematics/Kinematics.h>
-
 #include <tf/transform_listener.h>
 #include <tf_conversions/tf_kdl.h>
 #include <tf/transform_datatypes.h>
@@ -112,7 +109,6 @@ private:
 
   std::string root_link_name_;
 
-  std::map<std::string, double> whole_body_joint_positions_map_;
   std::vector<double> whole_body_joint_values_;
   std::vector<std::string> whole_body_joint_names_;
 
@@ -137,7 +133,7 @@ private:
   tf::Point com_;
   tf::Point p_com_;
   tf::Transform tf_to_support_;
-  double totoal_mass_  ;
+  double total_mass_ ;
 
   FootSupport support_mode_;
 
